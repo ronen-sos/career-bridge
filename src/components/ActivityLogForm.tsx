@@ -62,36 +62,38 @@ export function ActivityLogForm() {
       </CardDescription>
 
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-        <div>
-          <label htmlFor="date" className="mb-1 block text-sm font-medium text-stone-700">
-            Date
-          </label>
-          <input
-            id="date"
-            name="date"
-            type="date"
-            defaultValue={today}
-            required
-            className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-          />
-        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="date" className="mb-1 block text-sm font-medium text-stone-700">
+              Date
+            </label>
+            <input
+              id="date"
+              name="date"
+              type="date"
+              defaultValue={today}
+              required
+              className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+            />
+          </div>
 
-        <div>
-          <label htmlFor="type" className="mb-1 block text-sm font-medium text-stone-700">
-            Activity type
-          </label>
-          <select
-            id="type"
-            name="type"
-            required
-            className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-          >
-            {ACTIVITY_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="type" className="mb-1 block text-sm font-medium text-stone-700">
+              Activity type
+            </label>
+            <select
+              id="type"
+              name="type"
+              required
+              className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+            >
+              {ACTIVITY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -153,7 +155,7 @@ export function ActivityLogForm() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
           {loading ? "Saving…" : "Save activity"}
         </Button>
       </form>

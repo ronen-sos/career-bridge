@@ -2,37 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Briefcase,
-  ClipboardList,
-  Home,
-  BookOpen,
-  Users,
-} from "lucide-react";
 
 import { cn } from "@/lib/cn";
-
-const participantLinks = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/accountability", label: "Log", icon: ClipboardList },
-  { href: "/resources", label: "Learn", icon: BookOpen },
-  { href: "/jobs", label: "Jobs", icon: Briefcase },
-];
-
-const managerLinks = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/manager", label: "Team", icon: Users },
-  { href: "/resources", label: "Learn", icon: BookOpen },
-  { href: "/jobs", label: "Jobs", icon: Briefcase },
-];
+import { getNavLinks } from "@/lib/nav-links";
 
 export function MobileNav({ role }: { role: string }) {
   const pathname = usePathname();
-  const links =
-    role === "MANAGER" || role === "ADMIN" ? managerLinks : participantLinks;
+  const links = getNavLinks(role);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur-sm safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur-sm safe-area-bottom md:hidden">
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
         {links.map(({ href, label, icon: Icon }) => {
           const active =

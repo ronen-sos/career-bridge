@@ -28,3 +28,16 @@ export const managerReviewSchema = z.object({
   activityId: z.string().min(1),
   managerNotes: z.string().optional(),
 });
+
+export const createUserSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(["PARTICIPANT", "MANAGER", "ADMIN"]),
+  managerId: z.string().optional().nullable(),
+});
+
+export const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.enum(["PARTICIPANT", "MANAGER", "ADMIN"]).optional(),
+  managerId: z.string().optional().nullable(),
+});

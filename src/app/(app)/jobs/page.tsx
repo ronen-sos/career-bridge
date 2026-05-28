@@ -12,16 +12,16 @@ export default async function JobsPage() {
   });
 
   return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold text-stone-900">St. Paul area jobs</h1>
-      <p className="mt-1 text-sm text-stone-600">
+    <div className="px-4 py-6 md:px-8 md:py-8">
+      <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">St. Paul area jobs</h1>
+      <p className="mt-1 text-sm text-stone-600 md:mt-2 md:text-base">
         Curated opportunities in and around St. Paul. Ask your program manager
         before applying.
       </p>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
         {jobs.length === 0 ? (
-          <p className="py-8 text-center text-stone-500">
+          <p className="col-span-full py-8 text-center text-stone-500">
             No job listings available right now. Check back soon.
           </p>
         ) : (

@@ -23,12 +23,12 @@ async function main() {
     where: { email: "steve@thriveinmn.com" },
     update: {
       name: "Steve",
-      role: "MANAGER",
+      role: "ADMIN",
     },
     create: {
       email: "steve@thriveinmn.com",
       name: "Steve",
-      role: "MANAGER",
+      role: "ADMIN",
     },
   });
 
@@ -183,8 +183,8 @@ async function main() {
 
   console.log("Seed completed.");
   console.log("Registered users (sign in with matching Google account):");
+  console.log("  Admin:       steve@thriveinmn.com");
   console.log("  Manager:     manager@bridgetothrive.org");
-  console.log("  Manager:     steve@thriveinmn.com");
   console.log("  Participant: participant@bridgetothrive.org");
 }
 

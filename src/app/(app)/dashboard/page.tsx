@@ -12,7 +12,46 @@ export default async function DashboardPage() {
   const session = await requireAuth();
   const weekStart = getWeekStart();
 
-  if (session.user.role === "MANAGER" || session.user.role === "ADMIN") {
+  if (session.user.role === "ADMIN") {
+    const participantCount = await db.user.count({
+      where: { role: "PARTICIPANT" },
+    });
+    const userCount = await db.user.count();
+    const pendingReviews = await db.jobSearchActivity.count({
+      where: { managerReviewed: false },
+    });
+
+    return (
+      <div className="px-4 py-6 md:px-8 md:py-8">
+        <Header name={session.user.name ?? "Admin"} subtitle="Administrator" />
+        <div className="mt-6 space-y-4">
+          <Card>
+            <CardTitle>Program overview</CardTitle>
+            <CardDescription>
+              Manage users, monitor team progress, and oversee the program.
+            </CardDescription>
+            <div className="mt-4 grid grid-cols-3 gap-3 md:gap-4">
+              <StatBox label="Users" value={userCount} />
+              <StatBox label="Participants" value={participantCount} />
+              <StatBox label="Pending reviews" value={pendingReviews} />
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Link href="/admin" className="block sm:flex-1">
+                <Button className="w-full">Manage users</Button>
+              </Link>
+              <Link href="/manager" className="block sm:flex-1">
+                <Button variant="secondary" className="w-full">
+                  View team progress
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (session.user.role === "MANAGER") {
     const participantCount = await db.user.count({
       where: { role: "PARTICIPANT" },
     });
@@ -21,7 +60,7 @@ export default async function DashboardPage() {
     });
 
     return (
-      <div className="px-4 py-6">
+      <div className="px-4 py-6 md:px-8 md:py-8">
         <Header name={session.user.name ?? "Manager"} subtitle="Program Manager" />
         <div className="mt-6 space-y-4">
           <Card>
@@ -29,11 +68,11 @@ export default async function DashboardPage() {
             <CardDescription>
               Monitor participant job search activity and provide feedback.
             </CardDescription>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3 md:max-w-md md:gap-4">
               <StatBox label="Participants" value={participantCount} />
               <StatBox label="Pending reviews" value={pendingReviews} />
             </div>
-            <Link href="/manager" className="mt-4 block">
+            <Link href="/manager" className="mt-4 block md:max-w-xs">
               <Button className="w-full">View team progress</Button>
             </Link>
           </Card>
@@ -80,13 +119,13 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="px-4 py-6">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Header
         name={session.user.name ?? "Participant"}
         subtitle="Your job search dashboard"
       />
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:gap-6">
         <ProgressSummary stats={stats} />
 
         <Card>

@@ -12,14 +12,14 @@ export default async function AccountabilityPage() {
   });
 
   return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold text-stone-900">Job search log</h1>
-      <p className="mt-1 text-sm text-stone-600">
+    <div className="px-4 py-6 md:px-8 md:py-8">
+      <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">Job search log</h1>
+      <p className="mt-1 text-sm text-stone-600 md:mt-2 md:text-base">
         Record your daily job search activities for accountability with your
         program manager.
       </p>
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
         <ActivityLogForm />
         <div>
           <h2 className="mb-3 text-lg font-semibold text-stone-900">

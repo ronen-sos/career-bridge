@@ -20,20 +20,20 @@ export default async function ResourcesPage() {
   }, {});
 
   return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold text-stone-900">Career resources</h1>
-      <p className="mt-1 text-sm text-stone-600">
+    <div className="px-4 py-6 md:px-8 md:py-8">
+      <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">Career resources</h1>
+      <p className="mt-1 text-sm text-stone-600 md:mt-2 md:text-base">
         Explore career paths and job search skills to support your placement
         journey.
       </p>
 
-      <div className="mt-6 space-y-8">
+      <div className="mt-6 space-y-8 md:space-y-10">
         {Object.entries(grouped).map(([category, items]) => (
           <section key={category}>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-800">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-800 md:mb-4 md:text-base">
               {category}
             </h2>
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
               {items.map((resource) => (
                 <Card key={resource.id}>
                   <CardTitle>{resource.title}</CardTitle>

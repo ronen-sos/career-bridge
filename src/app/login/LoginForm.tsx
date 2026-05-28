@@ -41,45 +41,59 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-stone-50">
-      <header className="px-6 py-8 text-center">
-        <Link href="/" className="text-sm text-emerald-800">
-          ← Back
-        </Link>
-        <h1 className="mt-4 text-2xl font-bold text-stone-900">Sign in</h1>
-        <p className="mt-2 text-stone-600">Career Bridge · Bridge to Thrive</p>
-      </header>
+    <div className="flex min-h-full bg-stone-50">
+      <div className="hidden flex-1 flex-col justify-center bg-gradient-to-br from-emerald-800 to-emerald-950 px-12 py-16 text-white lg:flex">
+        <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
+          Bridge to Thrive
+        </p>
+        <h1 className="mt-3 text-4xl font-bold leading-tight">Career Bridge</h1>
+        <p className="mt-4 max-w-md text-lg text-emerald-100">
+          Accountability and resources for your job search journey in St. Paul.
+        </p>
+      </div>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-6 pb-12">
-        <Card>
-          <CardTitle>Welcome back</CardTitle>
-          <CardDescription>
-            Sign in with your Google account. Only emails registered with the
-            program can access Career Bridge.
-          </CardDescription>
+      <div className="flex min-h-full flex-1 flex-col">
+        <header className="px-6 py-8 text-center lg:px-10 lg:py-10">
+          <Link href="/" className="text-sm text-emerald-800">
+            ← Back
+          </Link>
+          <h1 className="mt-4 text-2xl font-bold text-stone-900 lg:hidden">Sign in</h1>
+          <p className="mt-2 text-stone-600 lg:mt-4 lg:text-lg">
+            Sign in to Career Bridge
+          </p>
+        </header>
 
-          <div className="mt-6 space-y-4">
-            {error && (
-              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                <p>{error}</p>
-                {errorCode && errorCode !== "AccessDenied" && (
-                  <p className="mt-2 text-xs text-red-600">Error code: {errorCode}</p>
-                )}
-              </div>
-            )}
+        <main className="mx-auto w-full max-w-md flex-1 px-6 pb-12 lg:flex lg:max-w-lg lg:flex-col lg:justify-center lg:px-10 lg:pb-16">
+          <Card>
+            <CardTitle>Welcome back</CardTitle>
+            <CardDescription>
+              Sign in with your Google account. Only emails registered with the
+              program can access Career Bridge.
+            </CardDescription>
 
-            <Button
-              type="button"
-              disabled={loading}
-              onClick={handleGoogleSignIn}
-              className="w-full gap-3"
-            >
-              <GoogleIcon />
-              {loading ? "Redirecting…" : "Continue with Google"}
-            </Button>
-          </div>
-        </Card>
-      </main>
+            <div className="mt-6 space-y-4">
+              {error && (
+                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p>{error}</p>
+                  {errorCode && errorCode !== "AccessDenied" && (
+                    <p className="mt-2 text-xs text-red-600">Error code: {errorCode}</p>
+                  )}
+                </div>
+              )}
+
+              <Button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleSignIn}
+                className="w-full gap-3"
+              >
+                <GoogleIcon />
+                {loading ? "Redirecting…" : "Continue with Google"}
+              </Button>
+            </div>
+          </Card>
+        </main>
+      </div>
     </div>
   );
 }

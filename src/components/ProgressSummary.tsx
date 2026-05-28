@@ -36,7 +36,7 @@ export function ProgressSummary({ stats }: { stats: Stats }) {
       <CardDescription>
         Track your job search goals for the current week.
       </CardDescription>
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-3 gap-3 md:gap-6">
         {items.map((item) => {
           const pct =
             item.target > 0
@@ -44,8 +44,8 @@ export function ProgressSummary({ stats }: { stats: Stats }) {
               : 0;
           return (
             <div key={item.label} className="text-center">
-              <div className="relative mx-auto h-14 w-14">
-                <svg className="h-14 w-14 -rotate-90" viewBox="0 0 36 36">
+              <div className="relative mx-auto h-14 w-14 md:h-16 md:w-16">
+                <svg className="h-14 w-14 -rotate-90 md:h-16 md:w-16" viewBox="0 0 36 36">
                   <circle
                     cx="18"
                     cy="18"
