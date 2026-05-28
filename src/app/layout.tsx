@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   description:
     "Job search accountability and career resources for Bridge to Thrive program participants in St. Paul, MN.",
   applicationName: "Career Bridge",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

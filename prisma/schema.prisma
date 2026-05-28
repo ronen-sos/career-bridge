@@ -25,8 +25,9 @@ enum ActivityType {
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
-  passwordHash  String
+  passwordHash  String?
   name          String
+  image         String?
   role          Role     @default(PARTICIPANT)
   managerId     String?
   manager       User?    @relation("ManagerParticipants", fields: [managerId], references: [id])

@@ -1,6 +1,7 @@
+import "dotenv/config";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import bcrypt from "bcryptjs";
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
@@ -8,15 +9,25 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const passwordHash = await bcrypt.hash("demo1234", 12);
-
   const manager = await prisma.user.upsert({
     where: { email: "manager@bridgetothrive.org" },
     update: {},
     create: {
       email: "manager@bridgetothrive.org",
-      passwordHash,
       name: "Program Manager",
+      role: "MANAGER",
+    },
+  });
+
+  const steve = await prisma.user.upsert({
+    where: { email: "steve@thriveinmn.com" },
+    update: {
+      name: "Steve",
+      role: "MANAGER",
+    },
+    create: {
+      email: "steve@thriveinmn.com",
+      name: "Steve",
       role: "MANAGER",
     },
   });
@@ -26,10 +37,9 @@ async function main() {
     update: {},
     create: {
       email: "participant@bridgetothrive.org",
-      passwordHash,
       name: "Demo Participant",
       role: "PARTICIPANT",
-      managerId: manager.id,
+      managerId: steve.id,
     },
   });
 
@@ -172,8 +182,9 @@ async function main() {
   }
 
   console.log("Seed completed.");
-  console.log("Demo accounts (password: demo1234):");
+  console.log("Registered users (sign in with matching Google account):");
   console.log("  Manager:     manager@bridgetothrive.org");
+  console.log("  Manager:     steve@thriveinmn.com");
   console.log("  Participant: participant@bridgetothrive.org");
 }
 
