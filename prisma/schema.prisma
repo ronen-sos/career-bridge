@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PARTICIPANT
+  MANAGER
+  ADMIN
+}
+
+enum ActivityType {
+  APPLICATION
+  NETWORKING
+  INTERVIEW
+  RESEARCH
+  TRAINING
+  OTHER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  role          Role     @default(PARTICIPANT)
+  managerId     String?
+  manager       User?    @relation("ManagerParticipants", fields: [managerId], references: [id])
+  participants  User[]   @relation("ManagerParticipants")
+  activities    JobSearchActivity[]
+  weeklyGoals   WeeklyGoal[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model JobSearchActivity {
+  id                   String       @id @default(cuid())
+  userId               String
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                 DateTime     @db.Date
+  type                 ActivityType
+  description          String
+  company              String?
+  roleTitle            String?
+  hoursSpent           Float        @default(0)
+  managerReviewed      Boolean      @default(false)
+  managerNotes         String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([userId, date])
+}
+
+model WeeklyGoal {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart            DateTime @db.Date
+  targetApplications   Int      @default(5)
+  targetNetworking     Int      @default(3)
+  targetHours          Float    @default(10)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, weekStart])
+}
+
+model CareerResource {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  content     String?
+  url         String?
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model JobOpportunity {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  location    String   @default("St. Paul, MN")
+  description String
+  requirements String?
+  payRange    String?
+  url         String?
+  source      String?
+  isActive    Boolean  @default(true)
+  postedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
