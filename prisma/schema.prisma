@@ -85,17 +85,32 @@ model CareerResource {
 }
 
 model JobOpportunity {
-  id          String   @id @default(cuid())
-  title       String
-  company     String
-  location    String   @default("St. Paul, MN")
-  description String
-  requirements String?
-  payRange    String?
-  url         String?
-  source      String?
-  isActive    Boolean  @default(true)
-  postedAt    DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  externalId         String?  @unique
+  title              String
+  company            String
+  location           String   @default("St. Paul, MN")
+  description        String
+  requirements       String?
+  payRange           String?
+  url                String
+  source             String?
+  isRecoveryFriendly Boolean  @default(true)
+  isActive           Boolean  @default(true)
+  postedAt           DateTime @default(now())
+  syncedAt           DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([isActive, postedAt])
+}
+
+model JobSyncLog {
+  id              String   @id @default(cuid())
+  ranAt           DateTime @default(now())
+  jobsFound       Int      @default(0)
+  jobsUpserted    Int      @default(0)
+  jobsDeactivated Int      @default(0)
+  status          String
+  message         String?
 }

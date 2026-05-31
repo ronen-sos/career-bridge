@@ -6,7 +6,7 @@ A mobile-first web application for [Bridge to Thrive](https://bridgetothrive.org
 
 - **Accountability tracking** — Participants log applications, networking, interviews, and training. Program managers review activity and leave feedback.
 - **Career resources** — Curated guides on career paths (trades, warehouse, hospitality) and job search skills.
-- **Local job listings** — Highlighted opportunities in St. Paul and the Twin Cities metro.
+- **Local job listings** — Live listings near zip 55107, refreshed daily from Adzuna and filtered for recovery-friendly entry-level roles.
 
 ## Tech stack
 
@@ -109,6 +109,21 @@ Railway can deploy directly from your GitHub `main` branch.
 
 The `railway.json` file configures build and deploy commands. A single Next.js service handles both frontend and API — no separate backend needed.
 
+### Job listing sync
+
+Career Bridge pulls live job listings from the [Adzuna API](https://developer.adzuna.com/) near zip **55107** and filters for entry-level roles that are often suitable for people in recovery with employment gaps.
+
+1. Sign up at [developer.adzuna.com](https://developer.adzuna.com/signup) (free tier).
+2. Add to Railway (and local `.env`):
+   - `ADZUNA_APP_ID`
+   - `ADZUNA_APP_KEY`
+   - `CRON_SECRET` — random secret for scheduled sync
+3. **Automatic refresh** — the Jobs page triggers a sync when listings are older than 24 hours.
+4. **Scheduled refresh (recommended)** — call `POST /api/jobs/sync` daily with header `Authorization: Bearer YOUR_CRON_SECRET`. Use [Railway Cron](https://docs.railway.com/guides/cron-jobs) or a service like cron-job.org pointed at your production URL.
+5. **Manual refresh** — sign in as admin and `POST /api/jobs/sync`, or run `npm run jobs:sync` locally.
+
+Each job card links directly to the employer&apos;s application page.
+
 ## Project structure
 
 ```
@@ -135,7 +150,7 @@ prisma/
 - [ ] Push notifications for manager reviews
 - [ ] Admin panel for managing jobs and resources
 - [ ] Participant onboarding flow
-- [ ] Integration with Minnesota job boards (API)
+- [x] Live job listings near 55107 with daily Adzuna sync
 
 ## License
 
