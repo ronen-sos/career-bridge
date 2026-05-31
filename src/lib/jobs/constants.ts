@@ -1,7 +1,16 @@
 export const JOB_SEARCH_ZIP = "55107";
-export const JOB_SEARCH_RADIUS_MILES = 15;
+/** West Side St. Paul — center point for distance calculations. */
+export const JOB_ORIGIN_LAT = 44.9275;
+export const JOB_ORIGIN_LNG = -93.0718;
+/** Default radius shown on the jobs page slider. */
+export const JOB_DEFAULT_RADIUS_MILES = 15;
+/** Wider radius used when syncing listings from Adzuna (users filter down). */
+export const JOB_SYNC_RADIUS_MILES = 30;
+export const JOB_MIN_RADIUS_MILES = 1;
+export const JOB_MAX_RADIUS_MILES = 30;
 export const JOB_MAX_DAYS_OLD = 14;
 export const JOB_SYNC_STALE_HOURS = 24;
+export const JOB_RADIUS_STORAGE_KEY = "career-bridge-job-radius";
 
 /** Entry-level searches near West Side St. Paul (55107). */
 export const JOB_SEARCH_QUERIES = [

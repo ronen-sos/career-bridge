@@ -1,8 +1,8 @@
 import {
   JOB_MAX_DAYS_OLD,
   JOB_SEARCH_QUERIES,
-  JOB_SEARCH_RADIUS_MILES,
   JOB_SEARCH_ZIP,
+  JOB_SYNC_RADIUS_MILES,
 } from "@/lib/jobs/constants";
 
 export type AdzunaJob = {
@@ -12,7 +12,12 @@ export type AdzunaJob = {
   redirect_url: string;
   created: string;
   company?: { display_name?: string };
-  location?: { display_name?: string; area?: string[] };
+  location?: {
+    display_name?: string;
+    area?: string[];
+    latitude?: number;
+    longitude?: number;
+  };
   salary_min?: number;
   salary_max?: number;
   contract_type?: string;
@@ -56,6 +61,7 @@ export function isAdzunaConfigured(): boolean {
 export async function searchAdzunaJobs(
   query: string,
   page = 1,
+  radiusMiles = JOB_SYNC_RADIUS_MILES,
 ): Promise<AdzunaJob[]> {
   const credentials = getCredentials();
   if (!credentials) {
@@ -68,7 +74,7 @@ export async function searchAdzunaJobs(
     results_per_page: "50",
     what: query,
     where: JOB_SEARCH_ZIP,
-    distance: String(JOB_SEARCH_RADIUS_MILES),
+    distance: String(radiusMiles),
     max_days_old: String(JOB_MAX_DAYS_OLD),
     sort_by: "date",
     content_type: "application/json",

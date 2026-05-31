@@ -1,0 +1,2 @@
+ALTER TABLE "JobOpportunity" ADD COLUMN "latitude" DOUBLE PRECISION;
+ALTER TABLE "JobOpportunity" ADD COLUMN "longitude" DOUBLE PRECISION;

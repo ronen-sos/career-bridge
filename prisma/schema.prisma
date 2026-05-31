@@ -95,6 +95,8 @@ model JobOpportunity {
   payRange           String?
   url                String
   source             String?
+  latitude           Float?
+  longitude          Float?
   isRecoveryFriendly Boolean  @default(true)
   isActive           Boolean  @default(true)
   postedAt           DateTime @default(now())

@@ -3,6 +3,7 @@ import { ExternalLink, MapPin, DollarSign } from "lucide-react";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import { truncate } from "@/lib/jobs/recovery-friendly";
+import { formatDistanceMiles } from "@/lib/jobs/distance";
 
 export type JobCardData = {
   id: string;
@@ -14,10 +15,16 @@ export type JobCardData = {
   payRange: string | null;
   url: string;
   source: string | null;
-  postedAt: Date;
+  postedAt: Date | string;
 };
 
-export function JobCard({ job }: { job: JobCardData }) {
+export function JobCard({
+  job,
+  distanceMiles,
+}: {
+  job: JobCardData;
+  distanceMiles?: number | null;
+}) {
   const sourceLabel = job.source ?? "Apply";
 
   return (
@@ -53,6 +60,11 @@ export function JobCard({ job }: { job: JobCardData }) {
             <MapPin className="h-4 w-4 shrink-0" aria-hidden />
             {job.location}
           </span>
+          {distanceMiles != null && (
+            <span className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700">
+              {formatDistanceMiles(distanceMiles)} away
+            </span>
+          )}
           {job.payRange && (
             <span className="inline-flex items-center gap-1">
               <DollarSign className="h-4 w-4 shrink-0" aria-hidden />
