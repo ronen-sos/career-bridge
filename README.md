@@ -117,7 +117,8 @@ Railway can deploy directly from your GitHub `main` branch.
    - `AUTH_GOOGLE_SECRET` — From Google Cloud Console
 4. **Deploy** — Push to `main`. Railway runs:
    - Build: `npx prisma generate && npm run build`
-   - Start: `npx prisma migrate deploy && npm start`
+   - Pre-deploy: `npx prisma migrate deploy`
+   - Start: `npm start`
 5. **Seed production** (one time): Run `npm run db:seed` via Railway's shell or a one-off command.
 
 The `railway.json` file configures build and deploy commands. A single Next.js service handles both frontend and API — no separate backend needed.
