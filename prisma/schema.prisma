@@ -22,21 +22,95 @@ enum ActivityType {
   OTHER
 }
 
+enum WeeklyGoalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  COMPLETED
+}
+
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String?
-  name          String
-  image         String?
-  role          Role     @default(PARTICIPANT)
-  managerId     String?
-  manager       User?    @relation("ManagerParticipants", fields: [managerId], references: [id])
-  participants  User[]   @relation("ManagerParticipants")
-  activities    JobSearchActivity[]
-  weeklyGoals   WeeklyGoal[]
-  invitedAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String?
+  name            String
+  image           String?
+  role            Role              @default(PARTICIPANT)
+  managerId       String?
+  manager         User?             @relation("ManagerParticipants", fields: [managerId], references: [id])
+  participants    User[]            @relation("ManagerParticipants")
+  activities      JobSearchActivity[]
+  weeklyGoals     WeeklyGoal[]      @relation("ParticipantGoals")
+  createdWeeklyGoals WeeklyGoal[]   @relation("GoalCreator")
+  approvedWeeklyGoals WeeklyGoal[]  @relation("GoalApprover")
+  reviewedWeeklyGoals WeeklyGoal[]  @relation("GoalWeekReviewer")
+  profile         Profile?
+  workExperiences WorkExperience[]
+  education       Education[]
+  resumeGenerations ResumeGeneration[]
+  invitedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline  String?
+  summary   String?
+  phone     String?
+  location  String?
+  linkedInUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkExperience {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         String
+  title           String
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  isCurrent       Boolean   @default(false)
+  accomplishments String[]
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, startDate])
+}
+
+model Education {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution     String
+  degree          String
+  fieldOfStudy    String?
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  isCurrent       Boolean   @default(false)
+  accomplishments String[]
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, startDate])
+}
+
+model ResumeGeneration {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRole      String?
+  targetCompany   String?
+  contentMarkdown String   @db.Text
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model JobSearchActivity {
@@ -58,18 +132,82 @@ model JobSearchActivity {
 }
 
 model WeeklyGoal {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weekStart            DateTime @db.Date
-  targetApplications   Int      @default(5)
-  targetNetworking     Int      @default(3)
-  targetHours          Float    @default(10)
-  notes                String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    String           @id @default(cuid())
+  userId                String
+  user                  User             @relation("ParticipantGoals", fields: [userId], references: [id], onDelete: Cascade)
+  weekStart             DateTime         @db.Date
+  targetApplications    Int              @default(5)
+  targetInterviews      Int              @default(1)
+  targetJobSeekingHours Float            @default(15)
+  targetEmploymentHours Float            @default(15)
+  targetEducationHours  Float            @default(10)
+  notes                 String?
+  status                WeeklyGoalStatus @default(DRAFT)
+  createdById           String
+  createdBy             User             @relation("GoalCreator", fields: [createdById], references: [id])
+  managerApprovedAt     DateTime?
+  managerApprovedById   String?
+  managerApprovedBy     User?            @relation("GoalApprover", fields: [managerApprovedById], references: [id])
+  managerApprovalNotes  String?
+  weekReviewedAt        DateTime?
+  weekReviewedById      String?
+  weekReviewedBy        User?            @relation("GoalWeekReviewer", fields: [weekReviewedById], references: [id])
+  weekReviewNotes       String?
+  customItems           GoalCustomItem[]
+  dailyUpdates          GoalDailyUpdate[]
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   @@unique([userId, weekStart])
+  @@index([userId, status])
+}
+
+model GoalCustomItem {
+  id           String                     @id @default(cuid())
+  weeklyGoalId String
+  weeklyGoal   WeeklyGoal                 @relation(fields: [weeklyGoalId], references: [id], onDelete: Cascade)
+  label        String
+  sortOrder    Int                        @default(0)
+  completions  GoalCustomItemCompletion[]
+  createdAt    DateTime                   @default(now())
+
+  @@index([weeklyGoalId, sortOrder])
+}
+
+model GoalCustomItemCompletion {
+  id            String          @id @default(cuid())
+  customItemId  String
+  customItem    GoalCustomItem  @relation(fields: [customItemId], references: [id], onDelete: Cascade)
+  dailyUpdateId String
+  dailyUpdate   GoalDailyUpdate @relation(fields: [dailyUpdateId], references: [id], onDelete: Cascade)
+  completed     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([customItemId, dailyUpdateId])
+}
+
+model GoalDailyUpdate {
+  id                String                     @id @default(cuid())
+  weeklyGoalId      String
+  weeklyGoal        WeeklyGoal                 @relation(fields: [weeklyGoalId], references: [id], onDelete: Cascade)
+  date              DateTime                   @db.Date
+  applicationsCount Int                        @default(0)
+  interviewsCount   Int                        @default(0)
+  jobSeekingHours   Float                      @default(0)
+  employmentHours   Float                      @default(0)
+  educationHours    Float                      @default(0)
+  notes             String
+  managerReviewed   Boolean                    @default(false)
+  managerReviewedAt DateTime?
+  managerNotes      String?
+  customCompletions GoalCustomItemCompletion[]
+  submittedAt       DateTime                   @default(now())
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@unique([weeklyGoalId, date])
+  @@index([weeklyGoalId, date])
 }
 
 model CareerResource {

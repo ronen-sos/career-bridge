@@ -4,6 +4,8 @@ import {
   BookOpen,
   Users,
   Shield,
+  UserCircle,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,13 +17,16 @@ export type NavLink = {
 
 export const participantLinks: NavLink[] = [
   { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/goals", label: "Goals", icon: Target },
   { href: "/accountability", label: "Log", icon: ClipboardList },
+  { href: "/profile", label: "Profile", icon: UserCircle },
   { href: "/resources", label: "Learn", icon: BookOpen },
 ];
 
 export const managerLinks: NavLink[] = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/manager", label: "Team", icon: Users },
+  { href: "/profile", label: "Profile", icon: UserCircle },
   { href: "/resources", label: "Learn", icon: BookOpen },
 ];
 
@@ -29,6 +34,7 @@ export const adminLinks: NavLink[] = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/admin", label: "Users", icon: Shield },
   { href: "/manager", label: "Team", icon: Users },
+  { href: "/profile", label: "Profile", icon: UserCircle },
   { href: "/resources", label: "Learn", icon: BookOpen },
 ];
 

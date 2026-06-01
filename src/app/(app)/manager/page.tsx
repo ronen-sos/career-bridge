@@ -1,10 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ActivityList } from "@/components/ActivityList";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import {
+  GOAL_STATUS_COLORS,
+  GOAL_STATUS_LABELS,
+  computeGoalProgress,
+} from "@/lib/goals/progress";
+import { cn } from "@/lib/cn";
 
 type Participant = {
   id: string;
@@ -23,15 +30,44 @@ type Participant = {
   }>;
 };
 
+type ParticipantWithGoal = {
+  id: string;
+  name: string;
+  email: string;
+  goal: {
+    id: string;
+    status: string;
+    targetApplications: number;
+    targetInterviews: number;
+    targetJobSeekingHours: number;
+    targetEmploymentHours: number;
+    targetEducationHours: number;
+    dailyUpdates: Array<{
+      applicationsCount: number;
+      interviewsCount: number;
+      jobSeekingHours: number;
+      employmentHours: number;
+      educationHours: number;
+      managerReviewed: boolean;
+    }>;
+  } | null;
+};
+
 export default function ManagerPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [goalsData, setGoalsData] = useState<ParticipantWithGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/activities")
-      .then((r) => r.json())
-      .then(setParticipants)
+    Promise.all([
+      fetch("/api/activities").then((r) => r.json()),
+      fetch("/api/goals").then((r) => r.json()),
+    ])
+      .then(([activities, goals]) => {
+        setParticipants(activities);
+        setGoalsData(goals);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -69,11 +105,13 @@ export default function ManagerPage() {
     );
   }
 
+  const goalsByParticipant = new Map(goalsData.map((p) => [p.id, p.goal]));
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">Team progress</h1>
       <p className="mt-1 text-sm text-stone-600 md:mt-2 md:text-base">
-        Review participant job search activity and leave feedback.
+        Review weekly goals, daily check-ins, and job search activity.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -86,11 +124,62 @@ export default function ManagerPage() {
             const unreviewed = participant.activities.filter(
               (a) => !a.managerReviewed,
             );
+            const goal = goalsByParticipant.get(participant.id);
+            const unreviewedUpdates =
+              goal?.dailyUpdates.filter((u) => !u.managerReviewed).length ?? 0;
+            const progress = goal
+              ? computeGoalProgress(goal, goal.dailyUpdates)
+              : null;
 
             return (
               <Card key={participant.id}>
-                <CardTitle>{participant.name}</CardTitle>
-                <CardDescription>{participant.email}</CardDescription>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>{participant.name}</CardTitle>
+                    <CardDescription>{participant.email}</CardDescription>
+                  </div>
+                  <Link
+                    href={`/manager/participants/${participant.id}`}
+                    className="shrink-0 text-sm font-medium text-emerald-800 hover:text-emerald-900"
+                  >
+                    View profile
+                  </Link>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {goal ? (
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        GOAL_STATUS_COLORS[goal.status] ?? GOAL_STATUS_COLORS.DRAFT,
+                      )}
+                    >
+                      {GOAL_STATUS_LABELS[goal.status] ?? goal.status}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      No goals this week
+                    </span>
+                  )}
+                  {goal?.status === "PENDING_APPROVAL" && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      Needs approval
+                    </span>
+                  )}
+                  {unreviewedUpdates > 0 && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      {unreviewedUpdates} update{unreviewedUpdates === 1 ? "" : "s"} to review
+                    </span>
+                  )}
+                </div>
+
+                {progress && goal?.status === "ACTIVE" && (
+                  <p className="mt-2 text-xs text-stone-600">
+                    {progress.applications}/{progress.targetApplications} apps ·{" "}
+                    {progress.interviews}/{progress.targetInterviews} interviews ·{" "}
+                    {progress.totalHours}/{progress.targetTotalHours} hrs
+                  </p>
+                )}
 
                 {unreviewed.length > 0 && (
                   <div className="mt-4 space-y-4">

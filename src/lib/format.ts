@@ -6,6 +6,20 @@ export function formatDate(date: Date | string): string {
   });
 }
 
+export function formatDateRange(
+  start: Date | string,
+  end: Date | string | null,
+  isCurrent: boolean,
+): string {
+  const fmt = (d: Date | string) =>
+    new Date(d).toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+  const endLabel = isCurrent || !end ? "Present" : fmt(end);
+  return `${fmt(start)} – ${endLabel}`;
+}
+
 export function getWeekStart(date: Date = new Date()): Date {
   const d = new Date(date);
   const day = d.getDay();
