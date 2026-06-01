@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, ClipboardCheck, MapPin } from "lucide-react";
+import { ArrowRight, BookOpen, ClipboardCheck, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 
@@ -29,14 +29,14 @@ export default function HomePage() {
               description="Log applications, networking, and interviews. Your program manager sees your weekly activity."
             />
             <Feature
-              icon={Briefcase}
+              icon={BookOpen}
               title="Explore career paths"
               description="Learn about trades, warehouse, hospitality, and other entry-level opportunities."
             />
             <Feature
-              icon={MapPin}
-              title="Local job listings"
-              description="Curated opportunities in the St. Paul area and Twin Cities metro."
+              icon={Users}
+              title="Manager support"
+              description="Stay accountable with weekly goals and feedback from your program manager."
             />
           </div>
 

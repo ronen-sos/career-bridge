@@ -12,6 +12,7 @@ type User = {
   name: string;
   role: "PARTICIPANT" | "MANAGER" | "ADMIN";
   managerId: string | null;
+  invitedAt: string | null;
   manager: { id: string; name: string; email: string } | null;
 };
 
@@ -27,13 +28,24 @@ const ROLE_COLORS: Record<User["role"], string> = {
   ADMIN: "bg-purple-100 text-purple-800",
 };
 
+function formatInvitedAt(value: string | null): string | null {
+  if (!value) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function UserAdminPanel() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [emailConfigured, setEmailConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const managers = users.filter((u) => u.role === "MANAGER" || u.role === "ADMIN");
 
@@ -46,7 +58,9 @@ export function UserAdminPanel() {
       setLoading(false);
       return;
     }
-    setUsers(await res.json());
+    const data = await res.json();
+    setUsers(data.users ?? data);
+    setEmailConfigured(data.emailConfigured ?? true);
     setLoading(false);
   }
 
@@ -54,14 +68,17 @@ export function UserAdminPanel() {
     loadUsers();
   }, []);
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleInvite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formElement = e.currentTarget;
     setSaving(true);
     setFormError(null);
+    setFormSuccess(null);
 
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formElement);
     const role = form.get("role") as User["role"];
     const managerId = form.get("managerId") as string;
+    const personalNote = (form.get("personalNote") as string).trim();
 
     const res = await fetch("/api/users", {
       method: "POST",
@@ -71,20 +88,56 @@ export function UserAdminPanel() {
         name: form.get("name"),
         role,
         managerId: role === "PARTICIPANT" && managerId ? managerId : null,
+        sendInvite: true,
+        personalNote: personalNote || undefined,
       }),
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      const data = await res.json();
-      setFormError(typeof data.error === "string" ? data.error : "Could not create user.");
+      setFormError(
+        typeof data.error === "string"
+          ? data.error
+          : "Could not send invitation.",
+      );
       setSaving(false);
       return;
     }
 
-    e.currentTarget.reset();
+    formElement.reset();
+
+    if (data.emailSent) {
+      setFormSuccess(`Invitation email sent to ${data.user.email}.`);
+    } else {
+      setFormSuccess(
+        `${data.user.name} was added, but the invite email could not be sent: ${data.emailError ?? "unknown error"}.`,
+      );
+    }
+
     await loadUsers();
     router.refresh();
     setSaving(false);
+  }
+
+  async function resendInvite(user: User) {
+    setResendingId(user.id);
+    const res = await fetch(`/api/users/${user.id}/invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const data = await res.json();
+    setResendingId(null);
+
+    if (!res.ok) {
+      alert(typeof data.error === "string" ? data.error : "Could not resend invite.");
+      return;
+    }
+
+    await loadUsers();
+    alert(`Invitation resent to ${user.email}.`);
   }
 
   async function updateUser(
@@ -132,17 +185,29 @@ export function UserAdminPanel() {
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
       <Card>
-        <CardTitle>Add user</CardTitle>
+        <CardTitle>Invite someone</CardTitle>
         <CardDescription>
-          Register a Google email so they can sign in. They must use that exact
-          address with Google.
+          Send a welcome email with a link to sign in. They must use the same
+          Google account as the email address you enter.
         </CardDescription>
 
-        <form onSubmit={handleCreate} className="mt-4 space-y-4">
+        {!emailConfigured && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">Email not configured</p>
+            <p className="mt-1">
+              Add <code className="rounded bg-amber-100 px-1">GMAIL_USER</code>{" "}
+              and <code className="rounded bg-amber-100 px-1">GMAIL_APP_PASSWORD</code>{" "}
+              to your environment. Use a Google App Password from your account
+              security settings — not your regular Google password.
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleInvite} className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Full name" name="name" required placeholder="John Smith" />
             <Field
-              label="Google email"
+              label="Email address"
               name="email"
               type="email"
               required
@@ -188,10 +253,33 @@ export function UserAdminPanel() {
             </div>
           )}
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          <div>
+            <label htmlFor="personalNote" className="mb-1 block text-sm font-medium text-stone-700">
+              Personal note <span className="font-normal text-stone-500">(optional)</span>
+            </label>
+            <textarea
+              id="personalNote"
+              name="personalNote"
+              rows={3}
+              maxLength={500}
+              placeholder="Add a warm welcome — this appears in the invitation email."
+              className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+            />
+          </div>
 
-          <Button type="submit" disabled={saving} className="w-full sm:w-auto">
-            {saving ? "Adding…" : "Add user"}
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formSuccess && (
+            <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              {formSuccess}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            disabled={saving || !emailConfigured}
+            className="w-full sm:w-auto"
+          >
+            {saving ? "Sending invitation…" : "Send invitation"}
           </Button>
         </form>
       </Card>
@@ -214,6 +302,13 @@ export function UserAdminPanel() {
                     <p className="mt-1 text-xs text-stone-500">
                       Manager: {user.manager.name}
                     </p>
+                  )}
+                  {user.invitedAt ? (
+                    <p className="mt-1 text-xs text-emerald-700">
+                      Invited {formatInvitedAt(user.invitedAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-stone-500">Not invited yet</p>
                   )}
                 </div>
                 <span
@@ -257,6 +352,16 @@ export function UserAdminPanel() {
                     ))}
                   </select>
                 )}
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!emailConfigured || resendingId === user.id}
+                  onClick={() => resendInvite(user)}
+                >
+                  {resendingId === user.id ? "Sending…" : "Resend invite"}
+                </Button>
 
                 <Button
                   type="button"

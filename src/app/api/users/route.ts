@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isEmailConfigured } from "@/lib/email/client";
+import { createInvitedUser } from "@/lib/users/invite";
 import { createUserSchema } from "@/lib/validations";
 
 async function requireAdmin() {
@@ -25,7 +27,10 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(users);
+  return NextResponse.json({
+    users,
+    emailConfigured: isEmailConfigured(),
+  });
 }
 
 export async function POST(request: Request) {
@@ -44,44 +49,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const email = parsed.data.email.toLowerCase();
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) {
+  if (parsed.data.sendInvite !== false && !isEmailConfigured()) {
     return NextResponse.json(
-      { error: "A user with this email already exists." },
-      { status: 409 },
+      {
+        error:
+          "Email is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD before sending invites.",
+      },
+      { status: 503 },
     );
   }
 
-  if (parsed.data.role === "PARTICIPANT" && parsed.data.managerId) {
-    const manager = await db.user.findFirst({
-      where: {
-        id: parsed.data.managerId,
-        role: { in: ["MANAGER", "ADMIN"] },
-      },
-    });
-    if (!manager) {
-      return NextResponse.json(
-        { error: "Selected manager is not valid." },
-        { status: 400 },
-      );
+  try {
+    const result = await createInvitedUser(
+      parsed.data,
+      session.user.name ?? "Your program admin",
+    );
+
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not create user.";
+
+    if (message.includes("already exists")) {
+      return NextResponse.json({ error: message }, { status: 409 });
     }
+
+    if (message.includes("manager")) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const user = await db.user.create({
-    data: {
-      email,
-      name: parsed.data.name,
-      role: parsed.data.role,
-      managerId:
-        parsed.data.role === "PARTICIPANT"
-          ? parsed.data.managerId || null
-          : null,
-    },
-    include: {
-      manager: { select: { id: true, name: true, email: true } },
-    },
-  });
-
-  return NextResponse.json(user, { status: 201 });
 }

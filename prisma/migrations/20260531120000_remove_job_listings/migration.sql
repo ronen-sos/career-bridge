@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "JobSyncLog";
+DROP TABLE IF EXISTS "JobOpportunity";

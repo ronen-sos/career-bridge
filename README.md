@@ -1,12 +1,11 @@
 # Career Bridge
 
-A mobile-first web application for [Bridge to Thrive](https://bridgetothrive.org)'s Career Bridge program — helping men in recovery track job search progress, access career resources, and discover opportunities in the St. Paul area.
+A mobile-first web application for [Bridge to Thrive](https://bridgetothrive.org)'s Career Bridge program — helping men in recovery track job search progress and access career resources.
 
 ## Features
 
 - **Accountability tracking** — Participants log applications, networking, interviews, and training. Program managers review activity and leave feedback.
 - **Career resources** — Curated guides on career paths (trades, warehouse, hospitality) and job search skills.
-- **Local job listings** — Live listings near zip 55107, refreshed daily from Adzuna and filtered for recovery-friendly entry-level roles.
 
 ## Tech stack
 
@@ -89,7 +88,21 @@ AUTH_URL="http://localhost:3000"   # or your Railway URL in production
 
 ### 3. Register users
 
-Add participants and managers to the database with their Google email addresses. Users cannot self-register — their email must exist in the `User` table before Google sign-in will work.
+Add participants and managers to the database with their Google email addresses. Users cannot self-register — their email must exist in the `User` table before Google sign-in will work. Admins can send invitation emails from the **Users** page.
+
+### Invitation emails
+
+Career Bridge sends welcome emails from your Google account when an admin invites someone.
+
+1. Turn on **2-Step Verification** for your Google account (required for app passwords).
+2. Create an **App Password**: [Google Account → Security → App passwords](https://myaccount.google.com/apppasswords). Choose "Mail" and your device.
+3. Add to Railway (and local `.env`):
+   - `GMAIL_USER` — your Google email address (e.g. `steve@thriveinmn.com`)
+   - `GMAIL_APP_PASSWORD` — the 16-character app password Google generates
+   - `EMAIL_FROM_NAME` — optional; defaults to `Career Bridge`
+4. Sign in as admin → **Users** → fill out the invite form and click **Send invitation**.
+
+Use a Google **App Password**, not your regular sign-in password. Invited users receive the email from your Google address.
 
 ## Deploy to Railway
 
@@ -109,21 +122,6 @@ Railway can deploy directly from your GitHub `main` branch.
 
 The `railway.json` file configures build and deploy commands. A single Next.js service handles both frontend and API — no separate backend needed.
 
-### Job listing sync
-
-Career Bridge pulls live job listings from the [Adzuna API](https://developer.adzuna.com/) near zip **55107** and filters for entry-level roles that are often suitable for people in recovery with employment gaps.
-
-1. Sign up at [developer.adzuna.com](https://developer.adzuna.com/signup) (free tier).
-2. Add to Railway (and local `.env`):
-   - `ADZUNA_APP_ID`
-   - `ADZUNA_APP_KEY`
-   - `CRON_SECRET` — random secret for scheduled sync
-3. **Automatic refresh** — the Jobs page triggers a sync when listings are older than 24 hours.
-4. **Scheduled refresh (recommended)** — call `POST /api/jobs/sync` daily with header `Authorization: Bearer YOUR_CRON_SECRET`. Use [Railway Cron](https://docs.railway.com/guides/cron-jobs) or a service like cron-job.org pointed at your production URL.
-5. **Manual refresh** — sign in as admin and `POST /api/jobs/sync`, or run `npm run jobs:sync` locally.
-
-Each job card links directly to the employer&apos;s application page.
-
 ## Project structure
 
 ```
@@ -133,7 +131,6 @@ src/
       dashboard/    # Home dashboard
       accountability/  # Activity logging
       resources/    # Career path guides
-      jobs/         # St. Paul job listings
       manager/      # Manager team view
     api/            # REST API routes
     login/          # Sign in
@@ -148,9 +145,8 @@ prisma/
 
 - [ ] Weekly goal setting UI for participants
 - [ ] Push notifications for manager reviews
-- [ ] Admin panel for managing jobs and resources
+- [ ] Admin panel for managing resources
 - [ ] Participant onboarding flow
-- [x] Live job listings near 55107 with daily Adzuna sync
 
 ## License
 
