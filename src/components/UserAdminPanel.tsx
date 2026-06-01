@@ -40,6 +40,7 @@ export function UserAdminPanel() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [emailConfigured, setEmailConfigured] = useState(true);
+  const [emailProvider, setEmailProvider] = useState<"resend" | "gmail" | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function UserAdminPanel() {
     const data = await res.json();
     setUsers(data.users ?? data);
     setEmailConfigured(data.emailConfigured ?? true);
+    setEmailProvider(data.emailProvider ?? null);
     setLoading(false);
   }
 
@@ -80,64 +82,75 @@ export function UserAdminPanel() {
     const managerId = form.get("managerId") as string;
     const personalNote = (form.get("personalNote") as string).trim();
 
-    const res = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.get("email"),
-        name: form.get("name"),
-        role,
-        managerId: role === "PARTICIPANT" && managerId ? managerId : null,
-        sendInvite: true,
-        personalNote: personalNote || undefined,
-      }),
-    });
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.get("email"),
+          name: form.get("name"),
+          role,
+          managerId: role === "PARTICIPANT" && managerId ? managerId : null,
+          sendInvite: true,
+          personalNote: personalNote || undefined,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setFormError(
-        typeof data.error === "string"
-          ? data.error
-          : "Could not send invitation.",
-      );
+      if (!res.ok) {
+        setFormError(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not send invitation.",
+        );
+        return;
+      }
+
+      formElement.reset();
+
+      if (data.emailSent) {
+        setFormSuccess(`Invitation email sent to ${data.user.email}.`);
+      } else {
+        setFormSuccess(
+          `${data.user.name} was added, but the invite email could not be sent: ${data.emailError ?? "unknown error"}.`,
+        );
+      }
+
+      await loadUsers();
+      router.refresh();
+    } catch {
+      setFormError("Request timed out. On Railway, use Resend (RESEND_API_KEY) instead of Gmail SMTP.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    formElement.reset();
-
-    if (data.emailSent) {
-      setFormSuccess(`Invitation email sent to ${data.user.email}.`);
-    } else {
-      setFormSuccess(
-        `${data.user.name} was added, but the invite email could not be sent: ${data.emailError ?? "unknown error"}.`,
-      );
-    }
-
-    await loadUsers();
-    router.refresh();
-    setSaving(false);
   }
 
   async function resendInvite(user: User) {
     setResendingId(user.id);
-    const res = await fetch(`/api/users/${user.id}/invite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    try {
+      const res = await fetch(`/api/users/${user.id}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(30_000),
+      });
 
-    const data = await res.json();
-    setResendingId(null);
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert(typeof data.error === "string" ? data.error : "Could not resend invite.");
-      return;
+      if (!res.ok) {
+        alert(typeof data.error === "string" ? data.error : "Could not resend invite.");
+        return;
+      }
+
+      await loadUsers();
+      alert(`Invitation resent to ${user.email}.`);
+    } catch {
+      alert("Request timed out. On Railway, use Resend (RESEND_API_KEY) instead of Gmail SMTP.");
+    } finally {
+      setResendingId(null);
     }
-
-    await loadUsers();
-    alert(`Invitation resent to ${user.email}.`);
   }
 
   async function updateUser(
@@ -195,10 +208,26 @@ export function UserAdminPanel() {
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <p className="font-medium">Email not configured</p>
             <p className="mt-1">
-              Add <code className="rounded bg-amber-100 px-1">GMAIL_USER</code>{" "}
-              and <code className="rounded bg-amber-100 px-1">GMAIL_APP_PASSWORD</code>{" "}
-              to your environment. Use a Google App Password from your account
-              security settings — not your regular Google password.
+              For <strong>production (Railway)</strong>, add{" "}
+              <code className="rounded bg-amber-100 px-1">RESEND_API_KEY</code> and{" "}
+              <code className="rounded bg-amber-100 px-1">EMAIL_FROM</code> — Gmail
+              SMTP is blocked on Railway and will time out.
+            </p>
+            <p className="mt-2">
+              For <strong>local dev</strong>, use{" "}
+              <code className="rounded bg-amber-100 px-1">GMAIL_USER</code> and{" "}
+              <code className="rounded bg-amber-100 px-1">GMAIL_APP_PASSWORD</code>.
+            </p>
+          </div>
+        )}
+
+        {emailConfigured && emailProvider === "gmail" && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">Using Gmail SMTP</p>
+            <p className="mt-1">
+              This works locally but often times out on Railway. Add{" "}
+              <code className="rounded bg-amber-100 px-1">RESEND_API_KEY</code> on
+              Railway for reliable production invites.
             </p>
           </div>
         )}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isEmailConfigured } from "@/lib/email/client";
+import { getEmailProvider, isEmailConfigured } from "@/lib/email/client";
 import { createInvitedUser } from "@/lib/users/invite";
 import { createUserSchema } from "@/lib/validations";
 
@@ -30,6 +30,7 @@ export async function GET() {
   return NextResponse.json({
     users,
     emailConfigured: isEmailConfigured(),
+    emailProvider: getEmailProvider(),
   });
 }
 
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Email is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD before sending invites.",
+          "Email is not configured. Set RESEND_API_KEY + EMAIL_FROM on Railway, or GMAIL_USER + GMAIL_APP_PASSWORD for local dev.",
       },
       { status: 503 },
     );

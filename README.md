@@ -92,17 +92,20 @@ Add participants and managers to the database with their Google email addresses.
 
 ### Invitation emails
 
-Career Bridge sends welcome emails from your Google account when an admin invites someone.
+**Production (Railway):** Use [Resend](https://resend.com) — Gmail SMTP is blocked on Railway and will time out.
 
-1. Turn on **2-Step Verification** for your Google account (required for app passwords).
-2. Create an **App Password**: [Google Account → Security → App passwords](https://myaccount.google.com/apppasswords). Choose "Mail" and your device.
-3. Add to Railway (and local `.env`):
-   - `GMAIL_USER` — your Google email address (e.g. `steve@thriveinmn.com`)
-   - `GMAIL_APP_PASSWORD` — the 16-character app password Google generates
-   - `EMAIL_FROM_NAME` — optional; defaults to `Career Bridge`
-4. Sign in as admin → **Users** → fill out the invite form and click **Send invitation**.
+1. Sign up at [resend.com](https://resend.com) (free tier).
+2. Verify your domain or use their test sender for development.
+3. Add to Railway:
+   - `RESEND_API_KEY`
+   - `EMAIL_FROM` — e.g. `Career Bridge <onboarding@thrivehomes.life>`
 
-Use a Google **App Password**, not your regular sign-in password. Invited users receive the email from your Google address.
+**Local dev:** Gmail SMTP works on your machine:
+
+1. Create a Google [App Password](https://myaccount.google.com/apppasswords).
+2. Add to `.env`: `GMAIL_USER` and `GMAIL_APP_PASSWORD`.
+
+Resend is preferred when set; Gmail is used as fallback for local development only.
 
 ## Deploy to Railway
 

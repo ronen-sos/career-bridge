@@ -5,6 +5,8 @@ import { isEmailConfigured } from "@/lib/email/client";
 import { resendUserInvite } from "@/lib/users/invite";
 import { resendInviteSchema } from "@/lib/validations";
 
+export const maxDuration = 30;
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -27,7 +29,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "Email is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD before sending invites.",
+          "Email is not configured. Set RESEND_API_KEY + EMAIL_FROM on Railway, or GMAIL_USER + GMAIL_APP_PASSWORD for local dev.",
       },
       { status: 503 },
     );
