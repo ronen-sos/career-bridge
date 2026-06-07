@@ -35,6 +35,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   INTERVIEW: "Interview",
   RESEARCH: "Research",
   TRAINING: "Training",
+  RESUME: "Resume built",
   OTHER: "Other",
 };
 
@@ -44,5 +45,6 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   INTERVIEW: "bg-purple-100 text-purple-800",
   RESEARCH: "bg-amber-100 text-amber-800",
   TRAINING: "bg-teal-100 text-teal-800",
+  RESUME: "bg-emerald-100 text-emerald-800",
   OTHER: "bg-gray-100 text-gray-800",
 };

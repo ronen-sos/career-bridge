@@ -3,13 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  CompanyPicker,
+  type CompanySelection,
+} from "@/components/applications/CompanyPicker";
+import {
+  PositionPicker,
+  type PositionSelection,
+} from "@/components/applications/PositionPicker";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { useProgressBridge } from "@/components/goals/ProgressBridgeProvider";
+import {
+  finishActivityWithProgressCelebration,
+  snapshotProgressBeforeActivity,
+} from "@/lib/goals/after-activity-progress";
 
 const ACTIVITY_TYPES = [
   { value: "APPLICATION", label: "Application submitted" },
   { value: "NETWORKING", label: "Networking / outreach" },
-  { value: "INTERVIEW", label: "Interview" },
   { value: "RESEARCH", label: "Job research" },
   { value: "TRAINING", label: "Training / certification" },
   { value: "OTHER", label: "Other" },
@@ -17,23 +29,48 @@ const ACTIVITY_TYPES = [
 
 export function ActivityLogForm() {
   const router = useRouter();
+  const progressBridge = useProgressBridge();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activityType, setActivityType] = useState<string>("APPLICATION");
+  const [company, setCompany] = useState<CompanySelection>({ name: "" });
+  const [position, setPosition] = useState<PositionSelection>({ title: "" });
+  const [similarOverride, setSimilarOverride] = useState(false);
+  const [blockedBySimilarity, setBlockedBySimilarity] = useState(false);
   const today = new Date().toISOString().split("T")[0];
+
+  const isApplication = activityType === "APPLICATION";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formEl = e.currentTarget;
     setLoading(true);
     setError(null);
+    snapshotProgressBeforeActivity(progressBridge);
 
-    const form = new FormData(e.currentTarget);
+    if (isApplication && blockedBySimilarity) {
+      setError(
+        "Select an existing company or confirm adding a new company name.",
+      );
+      setLoading(false);
+      return;
+    }
+
+    const form = new FormData(formEl);
     const payload = {
       date: form.get("date"),
       type: form.get("type"),
-      description: form.get("description"),
-      company: form.get("company") || undefined,
-      roleTitle: form.get("roleTitle") || undefined,
-      hoursSpent: form.get("hoursSpent") || 0,
+      ...(isApplication
+        ? {}
+        : { description: form.get("description") }),
+      company: isApplication ? company.name : form.get("company") || undefined,
+      roleTitle: isApplication
+        ? position.title
+        : form.get("roleTitle") || undefined,
+      companyId: isApplication ? company.id : undefined,
+      positionId: isApplication ? position.id : undefined,
+      allowSimilarCompanyOverride: isApplication ? similarOverride : undefined,
+      hoursSpent: isApplication ? 0 : form.get("hoursSpent") || 0,
     };
 
     const res = await fetch("/api/activities", {
@@ -43,22 +80,31 @@ export function ActivityLogForm() {
     });
 
     if (!res.ok) {
-      setError("Could not save activity. Please try again.");
+      const data = await res.json().catch(() => ({}));
+      setError(
+        typeof data.error === "string"
+          ? data.error
+          : "Could not save activity. Please try again.",
+      );
       setLoading(false);
       return;
     }
 
-    router.refresh();
-    e.currentTarget.reset();
+    formEl.reset();
+    setCompany({ name: "" });
+    setPosition({ title: "" });
+    setSimilarOverride(false);
+    setActivityType("APPLICATION");
     setLoading(false);
+    await finishActivityWithProgressCelebration(progressBridge, router);
   }
 
   return (
     <Card>
       <CardTitle>Log job search activity</CardTitle>
       <CardDescription>
-        Record what you did today so your program manager can track your
-        progress.
+        Record networking, research, training, and other job search activities.
+        Use the interview form above to log interviews.
       </CardDescription>
 
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -85,6 +131,8 @@ export function ActivityLogForm() {
               id="type"
               name="type"
               required
+              value={activityType}
+              onChange={(e) => setActivityType(e.target.value)}
               className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
             >
               {ACTIVITY_TYPES.map((t) => (
@@ -96,67 +144,94 @@ export function ActivityLogForm() {
           </div>
         </div>
 
-        <div>
-          <label htmlFor="description" className="mb-1 block text-sm font-medium text-stone-700">
-            What did you do?
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            required
-            rows={3}
-            placeholder="e.g. Applied to warehouse position at Target, updated resume"
-            className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-          />
-        </div>
+        {isApplication ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CompanyPicker
+              value={company}
+              onChange={(next) => {
+                setCompany(next);
+                setPosition({ title: "" });
+              }}
+              similarOverride={similarOverride}
+              onSimilarityOverrideChange={setSimilarOverride}
+              onSimilarityWarningChange={setBlockedBySimilarity}
+              required
+            />
+            <PositionPicker
+              companyId={company.id}
+              companySelected={company.name.trim().length > 0}
+              value={position}
+              onChange={setPosition}
+              required
+            />
+          </div>
+        ) : (
+          <>
+            <div>
+              <label htmlFor="description" className="mb-1 block text-sm font-medium text-stone-700">
+                What did you do?
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                required
+                rows={3}
+                placeholder="e.g. Researched local employers, attended a job fair"
+                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+              />
+            </div>
 
-        <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="company" className="mb-1 block text-sm font-medium text-stone-700">
+                Company
+              </label>
+              <input
+                id="company"
+                name="company"
+                type="text"
+                placeholder="Optional"
+                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+              />
+            </div>
+            <div>
+              <label htmlFor="roleTitle" className="mb-1 block text-sm font-medium text-stone-700">
+                Role
+              </label>
+              <input
+                id="roleTitle"
+                name="roleTitle"
+                type="text"
+                placeholder="Optional"
+                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+              />
+            </div>
+          </div>
+          </>
+        )}
+
+        {!isApplication && (
           <div>
-            <label htmlFor="company" className="mb-1 block text-sm font-medium text-stone-700">
-              Company
+            <label htmlFor="hoursSpent" className="mb-1 block text-sm font-medium text-stone-700">
+              Hours spent
             </label>
             <input
-              id="company"
-              name="company"
-              type="text"
-              placeholder="Optional"
+              id="hoursSpent"
+              name="hoursSpent"
+              type="number"
+              min={0}
+              max={24}
+              step={0.5}
+              defaultValue={1}
               className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
             />
           </div>
-          <div>
-            <label htmlFor="roleTitle" className="mb-1 block text-sm font-medium text-stone-700">
-              Role
-            </label>
-            <input
-              id="roleTitle"
-              name="roleTitle"
-              type="text"
-              placeholder="Optional"
-              className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="hoursSpent" className="mb-1 block text-sm font-medium text-stone-700">
-            Hours spent
-          </label>
-          <input
-            id="hoursSpent"
-            name="hoursSpent"
-            type="number"
-            min={0}
-            max={24}
-            step={0.5}
-            defaultValue={1}
-            className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-          />
-        </div>
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-          {loading ? "Saving…" : "Save activity"}
+          {loading ? "Saving…" : isApplication ? "Save application" : "Save activity"}
         </Button>
       </form>
     </Card>

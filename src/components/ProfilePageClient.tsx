@@ -31,7 +31,19 @@ type SavedResumeItem = {
   daysRemaining: number;
 };
 
+function resolveInitialTab(
+  requestedTab: Tab | undefined,
+  contactComplete: boolean,
+): Tab {
+  if (requestedTab === "resume" && contactComplete) return "resume";
+  if (requestedTab === "education" && contactComplete) return "education";
+  if (requestedTab === "work" && contactComplete) return "work";
+  if (requestedTab === "basics") return "basics";
+  return contactComplete ? "work" : "basics";
+}
+
 type ProfilePageClientProps = {
+  initialTab?: Tab;
   profile: {
     headline?: string | null;
     summary?: string | null;
@@ -49,6 +61,7 @@ type ProfilePageClientProps = {
 };
 
 export function ProfilePageClient({
+  initialTab,
   profile,
   workExperiences,
   education,
@@ -58,7 +71,9 @@ export function ProfilePageClient({
   savedResumes,
   resumeRetentionDays,
 }: ProfilePageClientProps) {
-  const [tab, setTab] = useState<Tab>(contactComplete ? "work" : "basics");
+  const [tab, setTab] = useState<Tab>(() =>
+    resolveInitialTab(initialTab, contactComplete),
+  );
 
   function selectTab(next: Tab) {
     if (next !== "basics" && !contactComplete) return;

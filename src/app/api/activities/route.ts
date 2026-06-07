@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { recordJobApplication } from "@/lib/applications/record.server";
 import { activitySchema } from "@/lib/validations";
 
 export async function GET() {
@@ -63,15 +64,51 @@ export async function POST(request: Request) {
     );
   }
 
+  const data = parsed.data;
+
+  if (data.type === "APPLICATION") {
+    try {
+      const application = await recordJobApplication({
+        userId: session.user.id,
+        appliedAt: new Date(data.date),
+        companyId: data.companyId,
+        companyName: data.company,
+        allowSimilarCompanyOverride: data.allowSimilarCompanyOverride,
+        positionId: data.positionId,
+        positionTitle: data.roleTitle,
+        description: data.description,
+        hoursSpent: data.hoursSpent,
+      });
+
+      return NextResponse.json(application, { status: 201 });
+    } catch (err) {
+      const similar = (err as Error & { similar?: unknown[] }).similar;
+      if (similar) {
+        return NextResponse.json(
+          {
+            error:
+              "A similar company name already exists. Select it or confirm adding a new company.",
+            similar,
+          },
+          { status: 409 },
+        );
+      }
+
+      const message =
+        err instanceof Error ? err.message : "Could not record application.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const activity = await db.jobSearchActivity.create({
     data: {
       userId: session.user.id,
-      date: new Date(parsed.data.date),
-      type: parsed.data.type,
-      description: parsed.data.description,
-      company: parsed.data.company || null,
-      roleTitle: parsed.data.roleTitle || null,
-      hoursSpent: parsed.data.hoursSpent,
+      date: new Date(data.date),
+      type: data.type,
+      description: data.description,
+      company: data.company || null,
+      roleTitle: data.roleTitle || null,
+      hoursSpent: data.hoursSpent,
     },
   });
 

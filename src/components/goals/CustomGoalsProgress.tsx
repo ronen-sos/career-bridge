@@ -45,6 +45,9 @@ export function CustomGoalsProgress({
               )}
             >
               {item.label}
+              <span className="mt-0.5 block text-xs text-stone-500">
+                {item.expectedHours} hr{item.expectedHours === 1 ? "" : "s"} expected
+              </span>
             </span>
           </li>
         ))}

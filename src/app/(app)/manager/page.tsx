@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ActivityList } from "@/components/ActivityList";
+import { ManagerQuestionsFeed } from "@/components/goals/AskManagerPanel";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -39,15 +40,11 @@ type ParticipantWithGoal = {
     status: string;
     targetApplications: number;
     targetInterviews: number;
-    targetJobSeekingHours: number;
     targetEmploymentHours: number;
-    targetEducationHours: number;
     dailyUpdates: Array<{
       applicationsCount: number;
       interviewsCount: number;
-      jobSeekingHours: number;
       employmentHours: number;
-      educationHours: number;
       managerReviewed: boolean;
     }>;
   } | null;
@@ -111,8 +108,12 @@ export default function ManagerPage() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">Team progress</h1>
       <p className="mt-1 text-sm text-stone-600 md:mt-2 md:text-base">
-        Review weekly goals, daily check-ins, and job search activity.
+        Review weekly goals, participant questions, and job search activity.
       </p>
+
+      <div className="mt-6">
+        <ManagerQuestionsFeed />
+      </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {participants.length === 0 ? (
@@ -125,8 +126,6 @@ export default function ManagerPage() {
               (a) => !a.managerReviewed,
             );
             const goal = goalsByParticipant.get(participant.id);
-            const unreviewedUpdates =
-              goal?.dailyUpdates.filter((u) => !u.managerReviewed).length ?? 0;
             const progress = goal
               ? computeGoalProgress(goal, goal.dailyUpdates)
               : null;
@@ -161,14 +160,9 @@ export default function ManagerPage() {
                       No goals this week
                     </span>
                   )}
-                  {goal?.status === "PENDING_APPROVAL" && (
+                  {(goal?.status === "DRAFT" || goal?.status === "PENDING_APPROVAL") && (
                     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                      Needs approval
-                    </span>
-                  )}
-                  {unreviewedUpdates > 0 && (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                      {unreviewedUpdates} update{unreviewedUpdates === 1 ? "" : "s"} to review
+                      Needs activation
                     </span>
                   )}
                 </div>

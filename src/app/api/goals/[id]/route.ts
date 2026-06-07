@@ -55,37 +55,23 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const isManager =
     session.user.role === "MANAGER" || session.user.role === "ADMIN";
-  const isParticipant =
-    session.user.role === "PARTICIPANT" && goal.userId === session.user.id;
 
   const { action, managerApprovalNotes, weekReviewNotes } = parsed.data;
 
   if (action === "submit") {
-    if (!isParticipant) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (goal.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Only draft goals can be submitted." },
-        { status: 409 },
-      );
-    }
-
-    const updated = await db.weeklyGoal.update({
-      where: { id },
-      data: { status: "PENDING_APPROVAL" },
-      include: goalInclude,
-    });
-    return NextResponse.json(updated);
+    return NextResponse.json(
+      { error: "Participants cannot submit goals. Contact your program manager." },
+      { status: 403 },
+    );
   }
 
   if (action === "approve") {
     if (!isManager) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (goal.status !== "PENDING_APPROVAL" && goal.status !== "DRAFT") {
+    if (goal.status !== "DRAFT" && goal.status !== "PENDING_APPROVAL") {
       return NextResponse.json(
-        { error: "This goal is not awaiting approval." },
+        { error: "This goal is not ready to activate." },
         { status: 409 },
       );
     }

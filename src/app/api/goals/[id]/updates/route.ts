@@ -33,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "Daily updates are only available after your manager approves this week's goals.",
+          "Updates are only available after your program manager activates your goals.",
       },
       { status: 409 },
     );
@@ -49,9 +49,9 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const updateDate = new Date(parsed.data.date);
-  if (!isDateInWeek(updateDate, goal.weekStart)) {
+  if (!isDateInWeek(updateDate, goal.weekStart, goal.weekEnd)) {
     return NextResponse.json(
-      { error: "Date must fall within the goal week." },
+      { error: "Date must fall within the goal period." },
       { status: 400 },
     );
   }
@@ -59,9 +59,7 @@ export async function POST(request: Request, context: RouteContext) {
   const hasNumericActivity =
     parsed.data.applicationsCount > 0 ||
     parsed.data.interviewsCount > 0 ||
-    parsed.data.jobSeekingHours > 0 ||
-    parsed.data.employmentHours > 0 ||
-    parsed.data.educationHours > 0;
+    parsed.data.employmentHours > 0;
 
   const hasCustomCompletion = parsed.data.customCompletions?.some(
     (c) => c.completed,
@@ -87,9 +85,7 @@ export async function POST(request: Request, context: RouteContext) {
     update: {
       applicationsCount: parsed.data.applicationsCount,
       interviewsCount: parsed.data.interviewsCount,
-      jobSeekingHours: parsed.data.jobSeekingHours,
       employmentHours: parsed.data.employmentHours,
-      educationHours: parsed.data.educationHours,
       notes: parsed.data.notes,
       managerReviewed: false,
       managerReviewedAt: null,
@@ -101,9 +97,7 @@ export async function POST(request: Request, context: RouteContext) {
       date: updateDate,
       applicationsCount: parsed.data.applicationsCount,
       interviewsCount: parsed.data.interviewsCount,
-      jobSeekingHours: parsed.data.jobSeekingHours,
       employmentHours: parsed.data.employmentHours,
-      educationHours: parsed.data.educationHours,
       notes: parsed.data.notes,
     },
   });

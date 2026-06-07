@@ -9,26 +9,42 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   GOAL_STATUS_COLORS,
   GOAL_STATUS_LABELS,
+  defaultWeekEnd,
+  formatWeekRange,
+  toDateInputValue,
 } from "@/lib/goals/progress";
 import { cn } from "@/lib/cn";
 import {
-  DEFAULT_HOUR_TARGETS,
-  MIN_WEEKLY_HOURS,
+  DEFAULT_EMPLOYMENT_HOURS,
 } from "@/lib/goals/hours";
+import { GoalUnitBudgetGuide } from "@/components/goals/GoalUnitBudgetGuide";
+
+function formatGoalErrors(error: Record<string, string[] | undefined>): string | null {
+  for (const messages of Object.values(error)) {
+    if (messages?.[0]) return messages[0];
+  }
+  return null;
+}
 
 type CustomItem = {
   id: string;
   label: string;
+  expectedHours: number;
+};
+
+type CustomItemDraft = {
+  id?: string;
+  label: string;
+  expectedHours: number;
 };
 
 type GoalData = {
   id: string;
   weekStart: string;
+  weekEnd: string;
   targetApplications: number;
   targetInterviews: number;
-  targetJobSeekingHours: number;
   targetEmploymentHours: number;
-  targetEducationHours: number;
   notes: string | null;
   status: string;
   managerApprovalNotes: string | null;
@@ -40,6 +56,7 @@ type GoalData = {
 type WeeklyGoalFormProps = {
   goal: GoalData | null;
   weekStart: string;
+  weekEnd?: string;
   participantId?: string;
   readOnly?: boolean;
 };
@@ -47,31 +64,55 @@ type WeeklyGoalFormProps = {
 export function WeeklyGoalForm({
   goal,
   weekStart,
+  weekEnd: weekEndProp,
   participantId,
   readOnly = false,
 }: WeeklyGoalFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [customItems, setCustomItems] = useState<Array<{ id?: string; label: string }>>(
-    goal?.customItems?.map((item) => ({ id: item.id, label: item.label })) ?? [],
+  const [customItems, setCustomItems] = useState<CustomItemDraft[]>(
+    goal?.customItems?.map((item) => ({
+      id: item.id,
+      label: item.label,
+      expectedHours: item.expectedHours,
+    })) ?? [],
   );
   const [newCustomItem, setNewCustomItem] = useState("");
+  const [newCustomItemHours, setNewCustomItemHours] = useState("1");
+  const [budgetPreview, setBudgetPreview] = useState({
+    targetApplications: goal?.targetApplications ?? 5,
+    targetInterviews: goal?.targetInterviews ?? 1,
+    targetEmploymentHours: goal?.targetEmploymentHours ?? DEFAULT_EMPLOYMENT_HOURS,
+  });
 
   const isManagerForm = !!participantId;
+  const defaultEnd = toDateInputValue(
+    defaultWeekEnd(goal?.weekStart ?? weekStart),
+  );
+  const [weekEnd, setWeekEnd] = useState(
+    goal?.weekEnd
+      ? toDateInputValue(goal.weekEnd)
+      : weekEndProp ?? defaultEnd,
+  );
 
   const editable =
+    isManagerForm &&
     !readOnly &&
     (!goal ||
       goal.status === "DRAFT" ||
-      (isManagerForm &&
-        (goal.status === "PENDING_APPROVAL" || goal.status === "ACTIVE")));
+      goal.status === "PENDING_APPROVAL" ||
+      goal.status === "ACTIVE");
 
   function addCustomItem() {
     const label = newCustomItem.trim();
+    const hours = Number(newCustomItemHours);
     if (label.length < 3 || customItems.length >= 10) return;
-    setCustomItems((prev) => [...prev, { label }]);
+    if (!Number.isFinite(hours) || hours < 0.5) return;
+
+    setCustomItems((prev) => [...prev, { label, expectedHours: hours }]);
     setNewCustomItem("");
+    setNewCustomItemHours("1");
   }
 
   function removeCustomItem(index: number) {
@@ -80,18 +121,19 @@ export function WeeklyGoalForm({
 
   async function saveGoal(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!participantId) return;
+
     setLoading(true);
     setError(null);
 
     const form = new FormData(e.currentTarget);
     const payload = {
       weekStart,
+      weekEnd,
       participantId,
       targetApplications: form.get("targetApplications"),
       targetInterviews: form.get("targetInterviews"),
-      targetJobSeekingHours: form.get("targetJobSeekingHours"),
       targetEmploymentHours: form.get("targetEmploymentHours"),
-      targetEducationHours: form.get("targetEducationHours"),
       notes: form.get("notes") || undefined,
       customItems,
     };
@@ -103,8 +145,17 @@ export function WeeklyGoalForm({
     });
 
     if (!res.ok) {
-      const data = await res.json();
-      setError(typeof data.error === "string" ? data.error : "Could not save goals.");
+      const data = await res.json().catch(() => ({}));
+      const fieldError =
+        typeof data.error === "object" && data.error !== null
+          ? formatGoalErrors(data.error as Record<string, string[] | undefined>)
+          : null;
+      setError(
+        fieldError ??
+          (typeof data.error === "string"
+            ? data.error
+            : "Could not save goals."),
+      );
       setLoading(false);
       return;
     }
@@ -113,27 +164,9 @@ export function WeeklyGoalForm({
     setLoading(false);
   }
 
-  async function submitForApproval() {
-    if (!goal) return;
-    setLoading(true);
-    setError(null);
-
-    const res = await fetch(`/api/goals/${goal.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "submit" }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(typeof data.error === "string" ? data.error : "Could not submit.");
-      setLoading(false);
-      return;
-    }
-
-    router.refresh();
-    setLoading(false);
-  }
+  const periodLabel = goal
+    ? formatWeekRange(goal.weekStart, goal.weekEnd)
+    : formatWeekRange(weekStart, weekEnd);
 
   return (
     <Card>
@@ -141,10 +174,11 @@ export function WeeklyGoalForm({
         <div>
           <CardTitle>Weekly goals</CardTitle>
           <CardDescription>
-            Set application and interview targets, then allocate at least{" "}
-            {MIN_WEEKLY_HOURS} weekly hours across job seeking, employment, and
-            education.
+            {isManagerForm
+              ? "Set targets and an end date for this goal period."
+              : `Your program manager sets these targets. Check in daily once goals are active.`}
           </CardDescription>
+          <p className="mt-1 text-sm font-medium text-emerald-800">{periodLabel}</p>
         </div>
         {goal && (
           <span
@@ -180,12 +214,36 @@ export function WeeklyGoalForm({
               className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800"
             >
               {item.label}
+              <span className="mt-0.5 block text-xs text-stone-500">
+                {item.expectedHours} hr{item.expectedHours === 1 ? "" : "s"} expected
+              </span>
             </li>
           ))}
         </ul>
       )}
 
       <form onSubmit={saveGoal} className="mt-4 space-y-4">
+        {editable && (
+          <div>
+            <label
+              htmlFor="weekEnd"
+              className="mb-1 block text-sm font-medium text-stone-700"
+            >
+              End date
+            </label>
+            <input
+              id="weekEnd"
+              name="weekEnd"
+              type="date"
+              value={weekEnd}
+              min={weekStart}
+              onChange={(e) => setWeekEnd(e.target.value)}
+              required
+              className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base sm:max-w-xs"
+            />
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label
@@ -203,6 +261,13 @@ export function WeeklyGoalForm({
               defaultValue={goal?.targetApplications ?? 5}
               disabled={!editable}
               required
+              onInput={(e) =>
+                setBudgetPreview((prev) => ({
+                  ...prev,
+                  targetApplications:
+                    Number((e.target as HTMLInputElement).value) || 0,
+                }))
+              }
               className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
             />
           </div>
@@ -222,89 +287,48 @@ export function WeeklyGoalForm({
               defaultValue={goal?.targetInterviews ?? 1}
               disabled={!editable}
               required
+              onInput={(e) =>
+                setBudgetPreview((prev) => ({
+                  ...prev,
+                  targetInterviews:
+                    Number((e.target as HTMLInputElement).value) || 0,
+                }))
+              }
               className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
             />
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-stone-700">
-            Weekly hours (must total at least {MIN_WEEKLY_HOURS})
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label
-                htmlFor="targetJobSeekingHours"
-                className="mb-1 block text-sm font-medium text-stone-700"
-              >
-                Job seeking
-              </label>
-              <input
-                id="targetJobSeekingHours"
-                name="targetJobSeekingHours"
-                type="number"
-                min={0}
-                max={168}
-                step={0.5}
-                defaultValue={
-                  goal?.targetJobSeekingHours ??
-                  DEFAULT_HOUR_TARGETS.targetJobSeekingHours
-                }
-                disabled={!editable}
-                required
-                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="targetEmploymentHours"
-                className="mb-1 block text-sm font-medium text-stone-700"
-              >
-                Employment
-              </label>
-              <input
-                id="targetEmploymentHours"
-                name="targetEmploymentHours"
-                type="number"
-                min={0}
-                max={168}
-                step={0.5}
-                defaultValue={
-                  goal?.targetEmploymentHours ??
-                  DEFAULT_HOUR_TARGETS.targetEmploymentHours
-                }
-                disabled={!editable}
-                required
-                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="targetEducationHours"
-                className="mb-1 block text-sm font-medium text-stone-700"
-              >
-                Education
-              </label>
-              <input
-                id="targetEducationHours"
-                name="targetEducationHours"
-                type="number"
-                min={0}
-                max={168}
-                step={0.5}
-                defaultValue={
-                  goal?.targetEducationHours ??
-                  DEFAULT_HOUR_TARGETS.targetEducationHours
-                }
-                disabled={!editable}
-                required
-                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
-              />
-            </div>
-          </div>
+          <label
+            htmlFor="targetEmploymentHours"
+            className="mb-1 block text-sm font-medium text-stone-700"
+          >
+            Employment hours
+          </label>
+          <input
+            id="targetEmploymentHours"
+            name="targetEmploymentHours"
+            type="number"
+            min={0}
+            max={168}
+            step={0.5}
+            defaultValue={
+              goal?.targetEmploymentHours ?? DEFAULT_EMPLOYMENT_HOURS
+            }
+            disabled={!editable}
+            required
+            onInput={(e) =>
+              setBudgetPreview((prev) => ({
+                ...prev,
+                targetEmploymentHours:
+                  Number((e.target as HTMLInputElement).value) || 0,
+              }))
+            }
+            className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50 sm:max-w-xs"
+          />
           <p className="mt-1 text-xs text-stone-500">
-            Job seeking: applications, networking, research. Employment: paid
-            work. Education: training, courses, certifications.
+            Paid work hours for the week. Each hour counts as 1 progress unit.
           </p>
         </div>
 
@@ -314,8 +338,10 @@ export function WeeklyGoalForm({
               Custom goals
             </label>
             <p className="mb-2 text-xs text-stone-500">
-              Add one-time tasks like attending a workshop or visiting a career
-              center. Check them off during daily updates.
+              Add one-time tasks like workshops or career center visits. Enter
+              how many hours you expect each to take — that time is added to the
+              weekly budget alongside applications, interviews, and employment
+              hours.
             </p>
             {customItems.length > 0 && (
               <ul className="mb-3 space-y-2">
@@ -324,7 +350,12 @@ export function WeeklyGoalForm({
                     key={item.id ?? `new-${index}`}
                     className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2"
                   >
-                    <span className="flex-1 text-sm text-stone-800">{item.label}</span>
+                    <span className="flex-1 text-sm text-stone-800">
+                      {item.label}
+                      <span className="mt-0.5 block text-xs text-stone-500">
+                        {item.expectedHours} hr{item.expectedHours === 1 ? "" : "s"} expected
+                      </span>
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeCustomItem(index)}
@@ -337,7 +368,7 @@ export function WeeklyGoalForm({
                 ))}
               </ul>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <input
                 type="text"
                 value={newCustomItem}
@@ -352,16 +383,51 @@ export function WeeklyGoalForm({
                   }
                 }}
               />
+              <div className="sm:w-28">
+                <label htmlFor="newCustomItemHours" className="mb-1 block text-xs font-medium text-stone-600 sm:sr-only">
+                  Expected hours
+                </label>
+                <input
+                  id="newCustomItemHours"
+                  type="number"
+                  min={0.5}
+                  max={168}
+                  step={0.5}
+                  value={newCustomItemHours}
+                  onChange={(e) => setNewCustomItemHours(e.target.value)}
+                  aria-label="Expected hours for custom goal"
+                  className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+                />
+              </div>
               <Button
                 type="button"
                 variant="secondary"
-                disabled={newCustomItem.trim().length < 3 || customItems.length >= 10}
+                disabled={
+                  newCustomItem.trim().length < 3 ||
+                  customItems.length >= 10 ||
+                  Number(newCustomItemHours) < 0.5
+                }
                 onClick={addCustomItem}
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+            <p className="mt-1 text-xs text-stone-500">
+              Expected hours (e.g. 8 for a full-day workshop).
+            </p>
           </div>
+        )}
+
+        {editable && isManagerForm && (
+          <GoalUnitBudgetGuide
+            targetApplications={budgetPreview.targetApplications}
+            targetInterviews={budgetPreview.targetInterviews}
+            targetEmploymentHours={budgetPreview.targetEmploymentHours}
+            customGoals={customItems.map((item) => ({
+              label: item.label,
+              expectedHours: item.expectedHours,
+            }))}
+          />
         )}
 
         <div>
@@ -384,7 +450,7 @@ export function WeeklyGoalForm({
         {isManagerForm && goal?.status === "ACTIVE" && editable && (
           <p className="text-sm text-stone-600">
             Save to update this participant&apos;s active goals for the rest of the
-            week. Custom goals with check-in history are kept even if removed from
+            period. Custom goals with check-in history are kept even if removed from
             this list.
           </p>
         )}
@@ -394,22 +460,19 @@ export function WeeklyGoalForm({
             <Button type="submit" disabled={loading}>
               {loading ? "Saving…" : "Save goals"}
             </Button>
-            {goal && goal.status === "DRAFT" && (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={loading}
-                onClick={submitForApproval}
-              >
-                Submit for approval
-              </Button>
-            )}
           </div>
         )}
 
-        {goal?.status === "PENDING_APPROVAL" && !readOnly && (
+        {!goal && !isManagerForm && (
+          <p className="text-sm text-stone-600">
+            Your program manager has not set goals for this period yet.
+          </p>
+        )}
+
+        {goal?.status === "DRAFT" && !isManagerForm && (
           <p className="text-sm text-amber-800">
-            Goals submitted — waiting for your manager to approve before you can log daily updates.
+            Goals are set — waiting for your program manager to activate them before
+            you can log daily updates.
           </p>
         )}
       </form>

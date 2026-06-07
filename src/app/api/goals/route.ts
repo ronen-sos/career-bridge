@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { canManageParticipantGoals } from "@/lib/goals/access";
-import { goalInclude } from "@/lib/goals/access";
-import { getWeekStart } from "@/lib/format";
+import {
+  canManageParticipantGoals,
+  findCurrentGoalForUser,
+  goalInclude,
+} from "@/lib/goals/access";
+import { currentGoalPeriodFilter } from "@/lib/goals/progress";
 import { weeklyGoalSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -14,12 +17,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const weekStartParam = searchParams.get("weekStart");
   const participantIdParam = searchParams.get("participantId");
-
-  const weekStart = weekStartParam
-    ? new Date(weekStartParam)
-    : getWeekStart();
 
   const isManager =
     session.user.role === "MANAGER" || session.user.role === "ADMIN";
@@ -34,30 +32,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const goal = await db.weeklyGoal.findUnique({
-      where: {
-        userId_weekStart: {
-          userId: participantIdParam,
-          weekStart,
-        },
-      },
-      include: goalInclude,
-    });
-
+    const goal = await findCurrentGoalForUser(participantIdParam);
     return NextResponse.json(goal);
   }
 
   if (session.user.role === "PARTICIPANT") {
-    const goal = await db.weeklyGoal.findUnique({
-      where: {
-        userId_weekStart: {
-          userId: session.user.id,
-          weekStart,
-        },
-      },
-      include: goalInclude,
-    });
-
+    const goal = await findCurrentGoalForUser(session.user.id);
     return NextResponse.json(goal);
   }
 
@@ -74,8 +54,10 @@ export async function GET(request: Request) {
         name: true,
         email: true,
         weeklyGoals: {
-          where: { weekStart },
+          where: currentGoalPeriodFilter(),
           include: goalInclude,
+          orderBy: { weekStart: "desc" },
+          take: 1,
         },
       },
       orderBy: { name: "asc" },
@@ -99,6 +81,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const isManager =
+    session.user.role === "MANAGER" || session.user.role === "ADMIN";
+
+  if (!isManager) {
+    return NextResponse.json(
+      { error: "Only program managers can set goals" },
+      { status: 403 },
+    );
+  }
+
   const body = await request.json();
   const parsed = weeklyGoalSchema.safeParse(body);
 
@@ -109,32 +101,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-
-  let participantId = session.user.id;
-
-  if (parsed.data.participantId) {
-    if (!isManager) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    const allowed = await canManageParticipantGoals(
-      session.user.id,
-      session.user.role,
-      parsed.data.participantId,
-    );
-    if (!allowed) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    participantId = parsed.data.participantId;
-  } else if (session.user.role !== "PARTICIPANT") {
-    return NextResponse.json(
-      { error: "Managers must specify participantId" },
-      { status: 400 },
-    );
+  const allowed = await canManageParticipantGoals(
+    session.user.id,
+    session.user.role,
+    parsed.data.participantId,
+  );
+  if (!allowed) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const participantId = parsed.data.participantId;
   const weekStart = new Date(parsed.data.weekStart);
+  const weekEnd = new Date(parsed.data.weekEnd);
 
   const existing = await db.weeklyGoal.findUnique({
     where: {
@@ -142,19 +120,9 @@ export async function POST(request: Request) {
     },
   });
 
-  const isManagerEdit =
-    isManager && participantId !== session.user.id;
-
   if (existing?.status === "COMPLETED") {
     return NextResponse.json(
-      { error: "Completed weeks can no longer be edited." },
-      { status: 409 },
-    );
-  }
-
-  if (existing && !isManagerEdit && existing.status !== "DRAFT") {
-    return NextResponse.json(
-      { error: "Goals for this week can no longer be edited." },
+      { error: "Completed goal periods can no longer be edited." },
       { status: 409 },
     );
   }
@@ -164,21 +132,19 @@ export async function POST(request: Request) {
       userId_weekStart: { userId: participantId, weekStart },
     },
     update: {
+      weekEnd,
       targetApplications: parsed.data.targetApplications,
       targetInterviews: parsed.data.targetInterviews,
-      targetJobSeekingHours: parsed.data.targetJobSeekingHours,
       targetEmploymentHours: parsed.data.targetEmploymentHours,
-      targetEducationHours: parsed.data.targetEducationHours,
       notes: parsed.data.notes || null,
     },
     create: {
       userId: participantId,
       weekStart,
+      weekEnd,
       targetApplications: parsed.data.targetApplications,
       targetInterviews: parsed.data.targetInterviews,
-      targetJobSeekingHours: parsed.data.targetJobSeekingHours,
       targetEmploymentHours: parsed.data.targetEmploymentHours,
-      targetEducationHours: parsed.data.targetEducationHours,
       notes: parsed.data.notes || null,
       createdById: session.user.id,
       status: "DRAFT",

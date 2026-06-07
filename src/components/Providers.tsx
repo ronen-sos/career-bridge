@@ -2,6 +2,8 @@
 
 import { SessionProvider } from "next-auth/react";
 
+import { ProgressBridgeProvider } from "@/components/goals/ProgressBridgeProvider";
+
 export function Providers({
   children,
   session,
@@ -9,5 +11,12 @@ export function Providers({
   children: React.ReactNode;
   session?: Parameters<typeof SessionProvider>[0]["session"];
 }) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  const content =
+    session?.user?.role === "PARTICIPANT" ? (
+      <ProgressBridgeProvider>{children}</ProgressBridgeProvider>
+    ) : (
+      children
+    );
+
+  return <SessionProvider session={session}>{content}</SessionProvider>;
 }

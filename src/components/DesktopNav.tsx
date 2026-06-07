@@ -6,7 +6,23 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { getNavLinks } from "@/lib/nav-links";
 
-export function DesktopNav({ role }: { role: string }) {
+function NavBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
+  return (
+    <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+export function DesktopNav({
+  role,
+  logBadgeCount = 0,
+}: {
+  role: string;
+  logBadgeCount?: number;
+}) {
   const pathname = usePathname();
   const links = getNavLinks(role);
 
@@ -23,10 +39,14 @@ export function DesktopNav({ role }: { role: string }) {
         {links.map(({ href, label, icon: Icon }) => {
           const active =
             pathname === href || pathname.startsWith(`${href}/`);
+          const badgeCount = href === "/accountability" ? logBadgeCount : 0;
+          const linkHref =
+            badgeCount > 0 ? `${href}#unread` : href;
+
           return (
             <Link
               key={href}
-              href={href}
+              href={linkHref}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 active
@@ -38,7 +58,8 @@ export function DesktopNav({ role }: { role: string }) {
                 className={cn("h-5 w-5 shrink-0", active && "stroke-[2.5]")}
                 aria-hidden
               />
-              {label}
+              <span className="flex-1">{label}</span>
+              <NavBadge count={badgeCount} />
             </Link>
           );
         })}

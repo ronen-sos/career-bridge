@@ -1,8 +1,7 @@
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import type { GoalProgress } from "@/lib/goals/progress";
-import { cn } from "@/lib/cn";
 
-function ProgressRing({
+export function ProgressRing({
   label,
   current,
   target,
@@ -63,7 +62,7 @@ export function GoalProgressSummary({
   stats: GoalProgress;
   status?: string;
 }) {
-  const countItems = [
+  const items = [
     {
       label: "Applications",
       current: stats.applications,
@@ -74,95 +73,39 @@ export function GoalProgressSummary({
       current: stats.interviews,
       target: stats.targetInterviews,
     },
-  ];
-
-  const hourItems = [
     {
-      label: "Job seeking",
-      current: stats.jobSeekingHours,
-      target: stats.targetJobSeekingHours,
-    },
-    {
-      label: "Employment",
+      label: "Employment hrs",
       current: stats.employmentHours,
       target: stats.targetEmploymentHours,
-    },
-    {
-      label: "Education",
-      current: stats.educationHours,
-      target: stats.targetEducationHours,
+      sublabel: `${stats.employmentHours}/${stats.targetEmploymentHours} hrs`,
     },
   ];
 
-  const hoursMet = stats.totalHours >= stats.targetTotalHours;
-  const hoursPct =
-    stats.targetTotalHours > 0
-      ? Math.min(100, Math.round((stats.totalHours / stats.targetTotalHours) * 100))
-      : 0;
-
-  const allMet =
-    countItems.every((item) => item.target === 0 || item.current >= item.target) &&
-    hoursMet;
+  const allMet = items.every(
+    (item) => item.target === 0 || item.current >= item.target,
+  );
 
   return (
     <Card>
       <CardTitle>This week&apos;s progress</CardTitle>
       <CardDescription>
         {status === "ACTIVE"
-          ? "Daily check-ins count toward these targets."
+          ? "Each goal type counts separately—going over on one does not replace another."
           : status === "PENDING_APPROVAL"
             ? "Waiting for your manager to approve these goals."
             : status === "DRAFT"
-              ? "Set your targets and submit for manager approval."
+              ? "Set targets and submit for manager approval."
               : status === "COMPLETED"
                 ? allMet
                   ? "Week closed — all targets met."
                   : "Week closed — review results with your manager."
-                : "Track applications, interviews, and weekly hours."}
+                : "Track applications, interviews, and employment hours."}
       </CardDescription>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:gap-6">
-        {countItems.map((item) => (
+      <div className="mt-4 grid grid-cols-3 gap-3 md:gap-6">
+        {items.map((item) => (
           <ProgressRing key={item.label} {...item} />
         ))}
-      </div>
-
-      <div className="mt-6 border-t border-stone-100 pt-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-stone-900">Weekly hours</p>
-            <p className="text-xs text-stone-500">
-              {stats.totalHours}/{stats.targetTotalHours} total hrs
-            </p>
-          </div>
-          <div className="text-right">
-            <p
-              className={cn(
-                "text-sm font-semibold",
-                hoursMet ? "text-emerald-800" : "text-stone-800",
-              )}
-            >
-              {hoursPct}%
-            </p>
-            <p className="text-xs text-stone-500">of weekly target</p>
-          </div>
-        </div>
-        <ul className="mt-3 space-y-2">
-          {hourItems.map((item) => {
-            const met = item.current >= item.target;
-            return (
-              <li
-                key={item.label}
-                className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm"
-              >
-                <span className="text-stone-700">{item.label}</span>
-                <span className={cn("font-medium", met ? "text-emerald-800" : "text-stone-800")}>
-                  {item.current}/{item.target} hrs
-                </span>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </Card>
   );

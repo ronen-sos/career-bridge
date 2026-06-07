@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 export type CustomItemInput = {
   id?: string;
   label: string;
+  expectedHours: number;
 };
 
 export async function syncCustomGoalItems(
@@ -19,6 +20,7 @@ export async function syncCustomGoalItems(
       data: items.map((item, sortOrder) => ({
         weeklyGoalId,
         label: item.label.trim(),
+        expectedHours: item.expectedHours,
         sortOrder,
       })),
     });
@@ -51,11 +53,16 @@ export async function syncCustomGoalItems(
     if (item.id && existing.some((e) => e.id === item.id)) {
       await db.goalCustomItem.update({
         where: { id: item.id },
-        data: { label: trimmed, sortOrder },
+        data: { label: trimmed, expectedHours: item.expectedHours, sortOrder },
       });
     } else {
       await db.goalCustomItem.create({
-        data: { weeklyGoalId, label: trimmed, sortOrder },
+        data: {
+          weeklyGoalId,
+          label: trimmed,
+          expectedHours: item.expectedHours,
+          sortOrder,
+        },
       });
     }
   }

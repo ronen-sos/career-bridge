@@ -3,40 +3,190 @@ import { z } from "zod";
 import { isValidPhoneUS, normalizePhoneUS } from "@/lib/phone";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
 
-export const activitySchema = z.object({
-  date: z.string().min(1),
-  type: z.enum([
-    "APPLICATION",
-    "NETWORKING",
-    "INTERVIEW",
-    "RESEARCH",
-    "TRAINING",
-    "OTHER",
-  ]),
-  description: z.string().min(3, "Please add a brief description"),
-  company: z.string().optional(),
-  roleTitle: z.string().optional(),
-  hoursSpent: z.coerce.number().min(0).max(24).default(0),
-});
+export const activitySchema = z
+  .object({
+    date: z.string().min(1),
+    type: z.enum([
+      "APPLICATION",
+      "NETWORKING",
+      "INTERVIEW",
+      "RESEARCH",
+      "TRAINING",
+      "OTHER",
+    ]),
+    description: z.string().optional(),
+    company: z.string().optional(),
+    roleTitle: z.string().optional(),
+    companyId: z.string().optional(),
+    positionId: z.string().optional(),
+    allowSimilarCompanyOverride: z.boolean().optional(),
+    hoursSpent: z.coerce.number().min(0).max(24).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "APPLICATION") {
+      const hasCompany = Boolean(data.companyId?.trim() || data.company?.trim());
+      const hasPosition = Boolean(data.roleTitle?.trim() || data.positionId?.trim());
+
+      if (!hasCompany) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Company is required when logging an application",
+          path: ["company"],
+        });
+      }
+
+      if (!hasPosition) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Position is required when logging an application",
+          path: ["roleTitle"],
+        });
+      }
+      return;
+    }
+
+    const description = data.description?.trim() ?? "";
+    if (description.length < 3) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please add a brief description",
+        path: ["description"],
+      });
+    }
+  })
+  .transform((data) => {
+    const hoursSpent = data.hoursSpent ?? 0;
+
+    if (data.type === "APPLICATION") {
+      const companyName = data.company?.trim() || "company";
+      const positionTitle = data.roleTitle?.trim() || "position";
+      return {
+        ...data,
+        hoursSpent,
+        description:
+          data.description?.trim() ||
+          `Applied for ${positionTitle} at ${companyName}`,
+      };
+    }
+
+    return {
+      ...data,
+      hoursSpent,
+      description: data.description!.trim(),
+    };
+  });
+
+export const jobApplicationSchema = z
+  .object({
+    appliedAt: z.string().min(1),
+    companyId: z.string().optional(),
+    companyName: z.string().optional(),
+    positionId: z.string().optional(),
+    positionTitle: z.string().optional(),
+    resumeGenerationId: z.string().optional(),
+    allowSimilarCompanyOverride: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasCompany = Boolean(data.companyId?.trim() || data.companyName?.trim());
+    const hasPosition = Boolean(
+      data.positionId?.trim() || data.positionTitle?.trim(),
+    );
+
+    if (!hasCompany) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Company is required",
+        path: ["companyName"],
+      });
+    }
+
+    if (!hasPosition) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Position is required",
+        path: ["positionTitle"],
+      });
+    }
+  });
+
+export const jobInterviewSchema = z
+  .object({
+    interviewedAt: z.string().min(1),
+    linkType: z.enum([
+      "LINKED_APPLICATION",
+      "NO_PRIOR_APPLICATION",
+      "RETROACTIVE_APPLICATION",
+    ]),
+    applicationId: z.string().optional(),
+    companyId: z.string().optional(),
+    companyName: z.string().optional(),
+    positionId: z.string().optional(),
+    positionTitle: z.string().optional(),
+    appliedAt: z.string().optional(),
+    allowSimilarCompanyOverride: z.boolean().optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.linkType === "LINKED_APPLICATION") {
+      if (!data.applicationId?.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Select an application for this interview",
+          path: ["applicationId"],
+        });
+      }
+      return;
+    }
+
+    const hasCompany = Boolean(data.companyId?.trim() || data.companyName?.trim());
+    const hasPosition = Boolean(
+      data.positionId?.trim() || data.positionTitle?.trim(),
+    );
+
+    if (!hasCompany) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Company is required",
+        path: ["companyName"],
+      });
+    }
+
+    if (!hasPosition) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Position is required",
+        path: ["positionTitle"],
+      });
+    }
+
+    if (data.linkType === "RETROACTIVE_APPLICATION" && !data.appliedAt?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Application date is required",
+        path: ["appliedAt"],
+      });
+    }
+  });
 
 export const customGoalItemSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(3, "Describe the custom goal").max(200),
+  expectedHours: z.coerce
+    .number()
+    .min(0.5, "Expected hours must be at least 0.5")
+    .max(168, "Expected hours cannot exceed 168"),
 });
-
-import { MIN_WEEKLY_HOURS } from "@/lib/goals/hours";
 
 const hourTargetField = z.coerce.number().min(0).max(168);
 
 export const weeklyGoalSchema = z
   .object({
-    participantId: z.string().optional(),
+    participantId: z.string().min(1, "Participant is required"),
     weekStart: z.string().min(1),
+    weekEnd: z.string().min(1),
     targetApplications: z.coerce.number().min(0).max(100),
     targetInterviews: z.coerce.number().min(0).max(50),
-    targetJobSeekingHours: hourTargetField,
     targetEmploymentHours: hourTargetField,
-    targetEducationHours: hourTargetField,
     notes: z.string().max(1000).optional(),
     customItems: z
       .array(customGoalItemSchema)
@@ -44,14 +194,10 @@ export const weeklyGoalSchema = z
       .optional(),
   })
   .refine(
-    (data) =>
-      data.targetJobSeekingHours +
-        data.targetEmploymentHours +
-        data.targetEducationHours >=
-      MIN_WEEKLY_HOURS,
+    (data) => new Date(data.weekEnd) >= new Date(data.weekStart),
     {
-      message: `Weekly hour targets must total at least ${MIN_WEEKLY_HOURS} hours`,
-      path: ["targetJobSeekingHours"],
+      message: "End date must be on or after the start date",
+      path: ["weekEnd"],
     },
   );
 
@@ -70,9 +216,7 @@ export const dailyGoalUpdateSchema = z.object({
   date: z.string().min(1),
   applicationsCount: z.coerce.number().min(0).max(50),
   interviewsCount: z.coerce.number().min(0).max(20),
-  jobSeekingHours: z.coerce.number().min(0).max(24),
   employmentHours: z.coerce.number().min(0).max(24),
-  educationHours: z.coerce.number().min(0).max(24),
   notes: z
     .string()
     .min(10, "Add a brief reflection on what you accomplished today")
@@ -82,6 +226,27 @@ export const dailyGoalUpdateSchema = z.object({
 
 export const dailyUpdateReviewSchema = z.object({
   managerNotes: z.string().max(1000).optional(),
+});
+
+export const participantQuestionSchema = z.object({
+  question: z
+    .string()
+    .min(10, "Please write your question in a bit more detail")
+    .max(2000),
+});
+
+export const questionReviewSchema = z.object({
+  managerReply: z.string().max(2000).optional(),
+});
+
+export const markQuestionsReadSchema = z.object({
+  questionIds: z.array(z.string().min(1)).optional(),
+});
+
+export const customCompletionToggleSchema = z.object({
+  customItemId: z.string().min(1),
+  completed: z.boolean(),
+  date: z.string().min(1).optional(),
 });
 
 export const managerReviewSchema = z.object({
@@ -171,6 +336,9 @@ export const resumeGenerateSchema = z.object({
     .string()
     .min(50, "Paste the full job description (at least 50 characters)")
     .max(15000, "Job description is too long"),
-  targetRole: z.string().max(200).optional(),
-  targetCompany: z.string().max(200).optional(),
+  targetRole: z.string().min(1, "Position title is required").max(200),
+  targetCompany: z.string().min(1, "Company name is required").max(200),
+  companyId: z.string().optional(),
+  positionId: z.string().optional(),
+  allowSimilarCompanyOverride: z.boolean().optional(),
 });

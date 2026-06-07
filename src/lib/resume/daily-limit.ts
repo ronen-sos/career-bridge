@@ -31,14 +31,17 @@ export async function recordResumeGeneration(
   contentMarkdown: string,
   targetRole?: string,
   targetCompany?: string,
+  positionId?: string,
 ) {
-  await db.resumeGeneration.create({
+  return db.resumeGeneration.create({
     data: {
       userId,
       contentMarkdown,
       targetRole: targetRole ?? null,
       targetCompany: targetCompany ?? null,
+      positionId: positionId ?? null,
     },
+    select: { id: true },
   });
 }
 

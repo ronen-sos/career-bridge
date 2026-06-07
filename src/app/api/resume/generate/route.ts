@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { logResumeBuiltActivity } from "@/lib/activities/feed.server";
+import { resolveCompany, resolvePosition } from "@/lib/applications/catalog.server";
 import { getOrCreateProfile } from "@/lib/profile/get-profile";
 import { requireContactComplete } from "@/lib/profile/require-contact";
 import { generateTailoredResume } from "@/lib/resume/anthropic";
@@ -35,7 +37,8 @@ export async function POST(request: Request) {
   const blocked = await requireContactComplete(session.user.id);
   if (blocked) return blocked;
 
-  const { jobDescription, targetRole, targetCompany } = parsed.data;
+  const { jobDescription, targetRole, targetCompany, companyId, positionId, allowSimilarCompanyOverride } =
+    parsed.data;
   const { profile, workExperiences, education, user } =
     await getOrCreateProfile(session.user.id);
 
@@ -60,14 +63,26 @@ export async function POST(request: Request) {
   }
 
   try {
+    const company = await resolveCompany({
+      companyId,
+      companyName: targetCompany,
+      allowSimilarOverride: allowSimilarCompanyOverride,
+    });
+
+    const position = await resolvePosition({
+      companyId: company.id,
+      positionId,
+      positionTitle: targetRole,
+    });
+
     const tailored = await generateTailoredResume(
       user?.name ?? session.user.name ?? "Candidate",
       profile,
       workExperiences,
       education,
       jobDescription,
-      targetRole,
-      targetCompany,
+      position.title,
+      company.name,
     );
 
     const candidateName = user?.name ?? session.user.name ?? "Candidate";
@@ -86,16 +101,24 @@ export async function POST(request: Request) {
 
     await purgeExpiredResumes(session.user.id);
 
-    await recordResumeGeneration(
+    const saved = await recordResumeGeneration(
       session.user.id,
       contentMarkdown,
-      targetRole,
-      targetCompany,
+      position.title,
+      company.name,
+      position.id,
     );
+
+    await logResumeBuiltActivity({
+      userId: session.user.id,
+      resumeGenerationId: saved.id,
+      companyName: company.name,
+      positionTitle: position.title,
+    });
 
     const docxBuffer = await buildResumeDocx(candidateName, tailored, contact);
 
-    const filename = resumeMarkdownFilename(targetCompany);
+    const filename = resumeMarkdownFilename(company.name);
 
     return new NextResponse(new Uint8Array(docxBuffer), {
       status: 200,
@@ -103,9 +126,24 @@ export async function POST(request: Request) {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "Content-Disposition": `attachment; filename="${filename}"`,
+        "X-Resume-Id": saved.id,
+        "X-Position-Id": position.id,
+        "X-Company-Id": company.id,
       },
     });
   } catch (err) {
+    const similar = (err as Error & { similar?: unknown[] }).similar;
+    if (similar) {
+      return NextResponse.json(
+        {
+          error:
+            "A similar company name already exists. Select it or confirm adding a new company.",
+          similar,
+        },
+        { status: 409 },
+      );
+    }
+
     let message =
       err instanceof Error ? err.message : "Resume generation failed";
 

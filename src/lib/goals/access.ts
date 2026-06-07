@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { currentGoalPeriodFilter } from "@/lib/goals/progress";
 
 export async function canManageParticipantGoals(
   actorId: string,
@@ -58,3 +59,14 @@ export const goalInclude = {
   weekReviewedBy: { select: { id: true, name: true } },
   user: { select: { id: true, name: true, email: true } },
 };
+
+export async function findCurrentGoalForUser(userId: string) {
+  return db.weeklyGoal.findFirst({
+    where: {
+      userId,
+      ...currentGoalPeriodFilter(),
+    },
+    orderBy: { weekStart: "desc" },
+    include: goalInclude,
+  });
+}

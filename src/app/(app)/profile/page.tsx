@@ -13,8 +13,23 @@ import {
 } from "@/lib/resume/retention";
 import { ProfilePageClient } from "@/components/ProfilePageClient";
 
-export default async function ProfilePage() {
+const PROFILE_TABS = ["basics", "work", "education", "resume"] as const;
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
+function parseProfileTab(tab: string | undefined): ProfileTab | undefined {
+  if (tab && PROFILE_TABS.includes(tab as ProfileTab)) {
+    return tab as ProfileTab;
+  }
+  return undefined;
+}
+
+type ProfilePageProps = {
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const session = await requireAuth();
+  const { tab } = await searchParams;
   await purgeExpiredResumes(session.user.id);
 
   const [{ profile, workExperiences, education }, { remainingToday }, savedResumes] =
@@ -48,6 +63,7 @@ export default async function ProfilePage() {
 
       <div className="mt-6">
         <ProfilePageClient
+          initialTab={parseProfileTab(tab)}
           profile={profile}
           workExperiences={serializedWork}
           education={serializedEducation}

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { requireRole } from "@/lib/session";
 import { UserAdminPanel } from "@/components/UserAdminPanel";
 
@@ -11,6 +13,15 @@ export default async function AdminPage() {
         Invite participants and managers by email. They&apos;ll receive a welcome
         message with a link to sign in using their Google account.
       </p>
+
+      <div className="mt-4">
+        <Link
+          href="/admin/employers"
+          className="text-sm font-medium text-emerald-800 hover:text-emerald-900"
+        >
+          View employer follow-through stats →
+        </Link>
+      </div>
 
       <div className="mt-6">
         <UserAdminPanel />

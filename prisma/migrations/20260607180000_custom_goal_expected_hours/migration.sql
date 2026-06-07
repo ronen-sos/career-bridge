@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "GoalCustomItem" ADD COLUMN "expectedHours" DOUBLE PRECISION NOT NULL DEFAULT 1;

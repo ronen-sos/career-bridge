@@ -1,18 +1,35 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { signOut } from "@/lib/auth";
 import { requireAuth } from "@/lib/session";
 import { db } from "@/lib/db";
-import { getWeekStart } from "@/lib/format";
-import { goalInclude } from "@/lib/goals/access";
-import { computeGoalProgress } from "@/lib/goals/progress";
-import { GoalProgressSummary } from "@/components/goals/GoalProgressSummary";
+import { findCurrentGoalForUser } from "@/lib/goals/access";
+import { computeGoalProgress, formatWeekRange, toDateInputValue } from "@/lib/goals/progress";
+import { computeCustomGoalProgress } from "@/lib/goals/custom-items";
+import { computeGoalPace } from "@/lib/goals/pace";
+import { countApplicationsInPeriod } from "@/lib/applications/record.server";
+import { countInterviewsInPeriod } from "@/lib/interviews/record.server";
+import { BridgeProgressCard } from "@/components/goals/BridgeProgressCard";
+import { ParticipantGoalsSummary } from "@/components/goals/ParticipantGoalsSummary";
+import { ApplicationsProgressCard } from "@/components/applications/ApplicationsProgressCard";
+import { ParticipantDashboardActions } from "@/components/dashboard/ParticipantDashboardActions";
+import { ParticipantMessagesSection } from "@/components/dashboard/ParticipantMessagesSection";
+import { hasUnreadManagerReply } from "@/lib/questions/unread";
 import { ActivityList } from "@/components/ActivityList";
+import {
+  activityFeedInclude,
+  serializeActivitiesForFeed,
+} from "@/lib/activities/feed.server";
+import {
+  countUnreadQuestionsAll,
+  countUnreadQuestionsForManager,
+  listQuestionsForUser,
+} from "@/lib/questions/record.server";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 export default async function DashboardPage() {
   const session = await requireAuth();
-  const weekStart = getWeekStart();
 
   if (session.user.role === "ADMIN") {
     const participantCount = await db.user.count({
@@ -22,15 +39,10 @@ export default async function DashboardPage() {
     const pendingActivityReviews = await db.jobSearchActivity.count({
       where: { managerReviewed: false },
     });
-    const pendingGoalApprovals = await db.weeklyGoal.count({
-      where: { status: "PENDING_APPROVAL" },
+    const draftGoals = await db.weeklyGoal.count({
+      where: { status: { in: ["DRAFT", "PENDING_APPROVAL"] } },
     });
-    const pendingUpdateReviews = await db.goalDailyUpdate.count({
-      where: {
-        managerReviewed: false,
-        weeklyGoal: { weekStart, status: "ACTIVE" },
-      },
-    });
+    const pendingQuestionReviews = await countUnreadQuestionsAll();
 
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">
@@ -44,13 +56,18 @@ export default async function DashboardPage() {
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
               <StatBox label="Users" value={userCount} />
               <StatBox label="Participants" value={participantCount} />
-              <StatBox label="Goals to approve" value={pendingGoalApprovals} />
-              <StatBox label="Updates to review" value={pendingUpdateReviews} />
+              <StatBox label="Goals to activate" value={draftGoals} />
+              <StatBox label="Questions to review" value={pendingQuestionReviews} />
               <StatBox label="Activities to review" value={pendingActivityReviews} />
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Link href="/admin" className="block sm:flex-1">
                 <Button className="w-full">Manage users</Button>
+              </Link>
+              <Link href="/admin/employers" className="block sm:flex-1">
+                <Button variant="secondary" className="w-full">
+                  Employer activity
+                </Button>
               </Link>
               <Link href="/manager" className="block sm:flex-1">
                 <Button variant="secondary" className="w-full">
@@ -68,22 +85,15 @@ export default async function DashboardPage() {
     const participantCount = await db.user.count({
       where: { role: "PARTICIPANT", managerId: session.user.id },
     });
-    const weekStart = getWeekStart();
-    const pendingGoalApprovals = await db.weeklyGoal.count({
+    const draftGoals = await db.weeklyGoal.count({
       where: {
-        status: "PENDING_APPROVAL",
+        status: { in: ["DRAFT", "PENDING_APPROVAL"] },
         user: { managerId: session.user.id },
       },
     });
-    const pendingUpdateReviews = await db.goalDailyUpdate.count({
-      where: {
-        managerReviewed: false,
-        weeklyGoal: {
-          user: { managerId: session.user.id },
-          weekStart,
-        },
-      },
-    });
+    const pendingQuestionReviews = await countUnreadQuestionsForManager(
+      session.user.id,
+    );
     const pendingActivityReviews = await db.jobSearchActivity.count({
       where: {
         managerReviewed: false,
@@ -98,12 +108,12 @@ export default async function DashboardPage() {
           <Card>
             <CardTitle>Team overview</CardTitle>
             <CardDescription>
-              Monitor participant goals, daily check-ins, and job search activity.
+              Monitor participant goals, questions, and job search activity.
             </CardDescription>
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
               <StatBox label="Participants" value={participantCount} />
-              <StatBox label="Goals to approve" value={pendingGoalApprovals} />
-              <StatBox label="Updates to review" value={pendingUpdateReviews} />
+              <StatBox label="Goals to activate" value={draftGoals} />
+              <StatBox label="Questions to review" value={pendingQuestionReviews} />
               <StatBox label="Activities to review" value={pendingActivityReviews} />
             </div>
             <Link href="/manager" className="mt-4 block md:max-w-xs">
@@ -115,38 +125,109 @@ export default async function DashboardPage() {
     );
   }
 
-  const goal = await db.weeklyGoal.findUnique({
-    where: {
-      userId_weekStart: { userId: session.user.id, weekStart },
+  const [goal, participantUser, questions] = await Promise.all([
+    findCurrentGoalForUser(session.user.id),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        managerId: true,
+        manager: { select: { name: true } },
+      },
+    }),
+    listQuestionsForUser(session.user.id, "PARTICIPANT"),
+  ]);
+
+  const managerName =
+    participantUser?.manager?.name ??
+    (participantUser?.managerId ? "your program manager" : null);
+
+  const recordedApplications = goal
+    ? await countApplicationsInPeriod(
+        session.user.id,
+        goal.weekStart,
+        goal.weekEnd,
+      )
+    : 0;
+
+  const recordedInterviews = goal
+    ? await countInterviewsInPeriod(
+        session.user.id,
+        goal.weekStart,
+        goal.weekEnd,
+      )
+    : 0;
+
+  const recentApplications = await db.jobApplication.findMany({
+    where: { userId: session.user.id },
+    orderBy: [{ appliedAt: "desc" }, { createdAt: "desc" }],
+    take: 5,
+    include: {
+      company: { select: { id: true, name: true } },
+      position: { select: { id: true, title: true } },
     },
-    include: goalInclude,
   });
 
   const stats = goal
-    ? computeGoalProgress(goal, goal.dailyUpdates)
+    ? computeGoalProgress(
+        goal,
+        goal.dailyUpdates,
+        recordedApplications,
+        recordedInterviews,
+      )
     : {
-        applications: 0,
-        interviews: 0,
-        jobSeekingHours: 0,
+        applications: recordedApplications,
+        interviews: recordedInterviews,
         employmentHours: 0,
-        educationHours: 0,
         totalHours: 0,
         targetApplications: 5,
         targetInterviews: 1,
-        targetJobSeekingHours: 15,
         targetEmploymentHours: 15,
-        targetEducationHours: 10,
-        targetTotalHours: 40,
+        targetTotalHours: 15,
       };
 
-  const unreviewedUpdates =
-    goal?.dailyUpdates.filter((u) => !u.managerReviewed).length ?? 0;
+  const customProgress = goal
+    ? computeCustomGoalProgress(goal.customItems, goal.dailyUpdates)
+    : [];
 
-  const recentActivities = await db.jobSearchActivity.findMany({
-    where: { userId: session.user.id },
-    orderBy: { date: "desc" },
-    take: 5,
-  });
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const [loggedActivityToday, recentActivities] = await Promise.all([
+    db.jobSearchActivity
+      .count({
+        where: {
+          userId: session.user.id,
+          date: { gte: todayStart, lte: todayEnd },
+        },
+      })
+      .then((count) => count > 0),
+    db.jobSearchActivity.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 5,
+      include: activityFeedInclude,
+    }),
+  ]);
+
+  const pace =
+    goal?.status === "ACTIVE"
+      ? computeGoalPace(
+          { weekStart: goal.weekStart, weekEnd: goal.weekEnd },
+          stats,
+          {
+            customItems: customProgress,
+            dailyUpdateDates: goal.dailyUpdates.map((u) => u.date),
+            loggedActivityToday,
+          },
+        )
+      : null;
+
+  const todayKey = new Date().toISOString().split("T")[0]!;
+  const todayUpdate = goal?.dailyUpdates.find(
+    (update) => toDateInputValue(update.date) === todayKey,
+  );
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -157,37 +238,103 @@ export default async function DashboardPage() {
 
       {!goal && (
         <Card className="mt-6 border-amber-200 bg-amber-50">
-          <CardTitle>Set this week&apos;s goals</CardTitle>
+          <CardTitle>Goals not set yet</CardTitle>
           <CardDescription>
-            Work with your manager to set targets, then check in daily.
+            Your program manager will set your targets for this period. Check
+            back here once goals are active.
           </CardDescription>
-          <Link href="/goals" className="mt-3 inline-block">
-            <Button size="sm">Go to goals</Button>
-          </Link>
         </Card>
       )}
 
-      {goal?.status === "PENDING_APPROVAL" && (
+      {goal?.status === "DRAFT" && (
         <Card className="mt-6 border-amber-200 bg-amber-50">
-          <CardTitle>Goals awaiting approval</CardTitle>
+          <CardTitle>Goals awaiting activation</CardTitle>
           <CardDescription>
-            Your manager needs to approve this week&apos;s goals before daily
-            check-ins begin.
+            Your program manager has set goals but has not activated them yet.
+            Progress tracking will open once they do.
           </CardDescription>
         </Card>
       )}
 
-      {unreviewedUpdates > 0 && goal?.status === "ACTIVE" && (
-        <Card className="mt-6 border-stone-200">
-          <CardDescription>
-            {unreviewedUpdates} daily update
-            {unreviewedUpdates === 1 ? "" : "s"} pending manager review.
-          </CardDescription>
-        </Card>
+      {pace && goal && (
+        <div className="mt-6">
+          <BridgeProgressCard
+            pace={pace}
+            weekRange={formatWeekRange(goal.weekStart, goal.weekEnd)}
+            goalId={goal.id}
+          />
+        </div>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:gap-6">
-        <GoalProgressSummary stats={stats} status={goal?.status} />
+      <div className="mt-6 space-y-4">
+        {goal && (
+          <ParticipantGoalsSummary
+            weekStart={goal.weekStart.toISOString()}
+            weekEnd={goal.weekEnd.toISOString()}
+            status={goal.status}
+            progress={stats}
+            customItems={customProgress}
+            managerApprovalNotes={goal.managerApprovalNotes}
+            managerNotes={goal.notes}
+            weekReviewNotes={goal.weekReviewNotes}
+          />
+        )}
+
+        <ParticipantDashboardActions
+          hoursLog={
+            goal?.status === "ACTIVE"
+              ? {
+                  goalId: goal.id,
+                  weekStart: toDateInputValue(goal.weekStart),
+                  weekEnd: toDateInputValue(goal.weekEnd),
+                  existingUpdate: todayUpdate
+                    ? {
+                        applicationsCount: todayUpdate.applicationsCount,
+                        interviewsCount: todayUpdate.interviewsCount,
+                        employmentHours: todayUpdate.employmentHours,
+                      }
+                    : null,
+                }
+              : null
+          }
+          customGoalsLog={
+            goal?.status === "ACTIVE" && goal.customItems.length > 0
+              ? {
+                  goalId: goal.id,
+                  customItems: goal.customItems.map((item) => ({
+                    id: item.id,
+                    label: item.label,
+                    expectedHours: item.expectedHours,
+                  })),
+                  dailyUpdates: goal.dailyUpdates.map((update) => ({
+                    customCompletions: update.customCompletions.map((c) => ({
+                      customItemId: c.customItemId,
+                      completed: c.completed,
+                    })),
+                  })),
+                }
+              : null
+          }
+          askManager={
+            managerName
+              ? { managerName }
+              : null
+          }
+        />
+
+        <ApplicationsProgressCard
+          applications={recentApplications.map((application) => ({
+            id: application.id,
+            appliedAt: application.appliedAt.toISOString(),
+            company: application.company,
+            position: application.position,
+          }))}
+          currentCount={stats.applications}
+          targetCount={stats.targetApplications}
+          interviewCount={stats.interviews}
+          interviewTarget={stats.targetInterviews}
+          status={goal?.status}
+        />
 
         <Card>
           <div className="flex items-center justify-between">
@@ -200,18 +347,27 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4">
-            <ActivityList activities={recentActivities} />
+            <ActivityList
+              activities={serializeActivitiesForFeed(recentActivities)}
+              showApplicationActions
+            />
           </div>
         </Card>
-      </div>
 
-      {goal?.status === "ACTIVE" && (
-        <div className="mt-4 text-center">
-          <Link href="/goals" className="text-sm font-medium text-emerald-800">
-            Submit today&apos;s check-in →
-          </Link>
-        </div>
-      )}
+        {managerName && (
+          <Suspense fallback={null}>
+            <ParticipantMessagesSection
+              questions={questions.map((q) => ({
+                id: q.id,
+                question: q.question,
+                managerReply: q.managerReply,
+                createdAt: q.createdAt.toISOString(),
+                unreadReply: hasUnreadManagerReply(q),
+              }))}
+            />
+          </Suspense>
+        )}
+      </div>
     </div>
   );
 }
