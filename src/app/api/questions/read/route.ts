@@ -29,11 +29,9 @@ export async function POST(request: Request) {
     parsed.data.questionIds,
   );
 
-  if (marked > 0) {
-    revalidatePath("/", "layout");
-    revalidatePath("/accountability");
-    revalidatePath("/dashboard");
-  }
+  revalidatePath("/", "layout");
+  revalidatePath("/accountability", "page");
+  revalidatePath("/dashboard", "page");
 
   return NextResponse.json({ marked });
 }

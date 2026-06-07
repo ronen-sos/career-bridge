@@ -16,7 +16,7 @@ export default async function AppLayout({
       : 0;
 
   return (
-    <Providers session={session}>
+    <Providers session={session} logBadgeCount={logBadgeCount}>
       {session?.user && (
         <DesktopNav role={session.user.role} logBadgeCount={logBadgeCount} />
       )}

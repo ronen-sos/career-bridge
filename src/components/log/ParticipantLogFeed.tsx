@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, MessageCircle } from "lucide-react";
 
@@ -14,21 +14,28 @@ import {
 import { ACTIVITY_COLORS, ACTIVITY_LABELS, formatDate } from "@/lib/format";
 import type { ParticipantLogItem } from "@/lib/log/participant-feed.server";
 import { markQuestionsAsRead } from "@/lib/questions/mark-read.client";
+import { useUnreadReplies } from "@/lib/questions/unread-replies.client";
 import { cn } from "@/lib/cn";
 
 import type { ActivityFeedItem } from "@/components/ActivityList";
 
 function scrollToFirstUnread(
   items: ParticipantLogItem[],
+  readQuestionIds: Set<string>,
   behavior: ScrollBehavior = "smooth",
 ) {
   const firstUnread = items.find(
-    (item) => item.kind === "message" && item.unreadReply,
+    (item) =>
+      item.kind === "message" &&
+      item.direction === "in" &&
+      item.unreadReply &&
+      !readQuestionIds.has(item.questionId),
   );
-  if (!firstUnread) return;
+  if (!firstUnread) return false;
 
   const el = document.getElementById(`log-item-${firstUnread.id}`);
   el?.scrollIntoView({ behavior, block: "center" });
+  return true;
 }
 
 export function ParticipantLogFeed({
@@ -38,10 +45,66 @@ export function ParticipantLogFeed({
   items: ParticipantLogItem[];
   showApplicationActions?: boolean;
 }) {
+  const unreadReplies = useUnreadReplies();
+  const [readQuestionIds, setReadQuestionIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of items) {
+      if (item.kind === "message" && item.direction === "in" && !item.unreadReply) {
+        initial.add(item.questionId);
+      }
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    setReadQuestionIds((current) => {
+      const next = new Set(current);
+      for (const item of items) {
+        if (item.kind === "message" && item.direction === "in" && !item.unreadReply) {
+          next.add(item.questionId);
+        }
+      }
+      return next;
+    });
+  }, [items]);
+
+  const readQuestionIdsRef = useRef(readQuestionIds);
+  readQuestionIdsRef.current = readQuestionIds;
+
+  const markQuestionRead = useCallback(
+    async (questionId: string) => {
+      if (readQuestionIdsRef.current.has(questionId)) {
+        return true;
+      }
+
+      setReadQuestionIds((current) => new Set(current).add(questionId));
+
+      const result = await markQuestionsAsRead([questionId]);
+      if (!result.ok) {
+        setReadQuestionIds((current) => {
+          const next = new Set(current);
+          next.delete(questionId);
+          return next;
+        });
+        return false;
+      }
+
+      if (result.marked > 0) {
+        unreadReplies?.markRepliesRead(result.marked);
+      }
+
+      return true;
+    },
+    [unreadReplies],
+  );
+
   useEffect(() => {
     function tryScroll() {
       if (window.location.hash !== "#unread") return;
-      scrollToFirstUnread(items);
+      const found = scrollToFirstUnread(items, readQuestionIds);
+      if (!found) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
     }
 
     const timeoutId = window.setTimeout(tryScroll, 150);
@@ -51,7 +114,7 @@ export function ParticipantLogFeed({
       window.clearTimeout(timeoutId);
       window.removeEventListener("hashchange", tryScroll);
     };
-  }, [items]);
+  }, [items, readQuestionIds]);
 
   if (items.length === 0) {
     return (
@@ -66,7 +129,12 @@ export function ParticipantLogFeed({
     <ul className="space-y-3">
       {items.map((item) =>
         item.kind === "message" ? (
-          <MessageLogListItem key={item.id} item={item} />
+          <MessageLogListItem
+            key={item.id}
+            item={item}
+            isRead={readQuestionIds.has(item.questionId)}
+            onMarkRead={markQuestionRead}
+          />
         ) : (
           <ActivityLogListItem
             key={item.id}
@@ -81,29 +149,24 @@ export function ParticipantLogFeed({
 
 function MessageLogListItem({
   item,
+  isRead,
+  onMarkRead,
 }: {
   item: Extract<ParticipantLogItem, { kind: "message" }>;
+  isRead: boolean;
+  onMarkRead: (questionId: string) => Promise<boolean>;
 }) {
   const router = useRouter();
-  const [isRead, setIsRead] = useState(!item.unreadReply);
   const [expanded, setExpanded] = useState(false);
   const isReply = item.direction === "in";
   const label = isReply ? "Manager reply" : "Message to manager";
   const isUnread = isReply && !isRead;
 
-  useEffect(() => {
-    if (!item.unreadReply) {
-      setIsRead(true);
-    }
-  }, [item.unreadReply]);
-
   async function handleReadUnread() {
     setExpanded(true);
-    setIsRead(true);
 
-    const ok = await markQuestionsAsRead([item.questionId]);
+    const ok = await onMarkRead(item.questionId);
     if (!ok) {
-      setIsRead(false);
       setExpanded(false);
       return;
     }

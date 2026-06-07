@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { formatDate } from "@/lib/format";
+import { markQuestionsAsRead } from "@/lib/questions/mark-read.client";
+import { useUnreadReplies } from "@/lib/questions/unread-replies.client";
 import { cn } from "@/lib/cn";
 
 export type ParticipantQuestionItem = {
@@ -25,16 +27,18 @@ export function ParticipantMessagesSection({
   const highlightId = searchParams.get("highlight");
   const sectionRef = useRef<HTMLDivElement>(null);
   const markedIds = useRef(new Set<string>());
+  const unreadReplies = useUnreadReplies();
 
-  function markRead(ids: string[]) {
+  async function markRead(ids: string[]) {
     const toMark = ids.filter((id) => !markedIds.current.has(id));
     if (toMark.length === 0) return;
     toMark.forEach((id) => markedIds.current.add(id));
-    fetch("/api/questions/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionIds: toMark }),
-    }).then(() => router.refresh());
+
+    const result = await markQuestionsAsRead(toMark);
+    if (result.ok && result.marked > 0) {
+      unreadReplies?.markRepliesRead(result.marked);
+    }
+    router.refresh();
   }
 
   useEffect(() => {

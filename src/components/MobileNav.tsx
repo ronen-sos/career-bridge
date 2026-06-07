@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
 import { getNavLinks } from "@/lib/nav-links";
+import { useUnreadReplies } from "@/lib/questions/unread-replies.client";
 
 function NavBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -25,6 +26,8 @@ export function MobileNav({
 }) {
   const pathname = usePathname();
   const links = getNavLinks(role);
+  const unreadReplies = useUnreadReplies();
+  const effectiveLogBadgeCount = unreadReplies?.logBadgeCount ?? logBadgeCount;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur-sm safe-area-bottom md:hidden">
@@ -32,7 +35,8 @@ export function MobileNav({
         {links.map(({ href, label, icon: Icon }) => {
           const active =
             pathname === href || pathname.startsWith(`${href}/`);
-          const badgeCount = href === "/accountability" ? logBadgeCount : 0;
+          const badgeCount =
+            href === "/accountability" ? effectiveLogBadgeCount : 0;
           const linkHref =
             badgeCount > 0 ? `${href}#unread` : href;
 

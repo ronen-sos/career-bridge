@@ -1,5 +1,9 @@
-export async function markQuestionsAsRead(questionIds: string[]): Promise<boolean> {
-  if (questionIds.length === 0) return true;
+export async function markQuestionsAsRead(
+  questionIds: string[],
+): Promise<{ ok: boolean; marked: number }> {
+  if (questionIds.length === 0) {
+    return { ok: true, marked: 0 };
+  }
 
   const res = await fetch("/api/questions/read", {
     method: "POST",
@@ -7,5 +11,10 @@ export async function markQuestionsAsRead(questionIds: string[]): Promise<boolea
     body: JSON.stringify({ questionIds }),
   });
 
-  return res.ok;
+  if (!res.ok) {
+    return { ok: false, marked: 0 };
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { marked?: number };
+  return { ok: true, marked: data.marked ?? 0 };
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
 import { getNavLinks } from "@/lib/nav-links";
+import { useUnreadReplies } from "@/lib/questions/unread-replies.client";
 
 function NavBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -25,6 +26,8 @@ export function DesktopNav({
 }) {
   const pathname = usePathname();
   const links = getNavLinks(role);
+  const unreadReplies = useUnreadReplies();
+  const effectiveLogBadgeCount = unreadReplies?.logBadgeCount ?? logBadgeCount;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-stone-200 bg-white md:flex">
@@ -39,7 +42,8 @@ export function DesktopNav({
         {links.map(({ href, label, icon: Icon }) => {
           const active =
             pathname === href || pathname.startsWith(`${href}/`);
-          const badgeCount = href === "/accountability" ? logBadgeCount : 0;
+          const badgeCount =
+            href === "/accountability" ? effectiveLogBadgeCount : 0;
           const linkHref =
             badgeCount > 0 ? `${href}#unread` : href;
 
