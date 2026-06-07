@@ -132,7 +132,9 @@ Railway can deploy directly from your GitHub `main` branch.
    - Start: `npm start`
 5. **Seed production** (one time): Run `npm run db:seed` via Railway's shell or a one-off command.
 
-The `railway.json` file configures build and deploy commands. A single Next.js service handles both frontend and API — no separate backend needed.
+The `railway.json` file configures build and deploy commands (Railpack builder). A single Next.js service handles both frontend and API — no separate backend needed.
+
+If a deploy still fails after switching builders, trigger a **clean redeploy** (Railway → Deployments → Redeploy, or set `NO_CACHE=1` once) to drop a stale Nixpacks cache.
 
 ## Project structure
 
