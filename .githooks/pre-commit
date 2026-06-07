@@ -1,0 +1,26 @@
+#!/bin/sh
+# Block accidental commits of local secret env files.
+
+blocked=0
+
+for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+  case "$file" in
+    .env.example) ;;
+    .env|.env.local|.env.production|.env.production.local|.env.development.local|.env.test.local)
+      echo "pre-commit: refused to commit $file (secrets stay local or in Railway)."
+      blocked=1
+      ;;
+    .env.*)
+      echo "pre-commit: refused to commit $file (secrets stay local or in Railway)."
+      blocked=1
+      ;;
+  esac
+done
+
+if [ "$blocked" -ne 0 ]; then
+  echo ""
+  echo "Use Railway dashboard variables for production. Keep real values in .env locally only."
+  exit 1
+fi
+
+exit 0

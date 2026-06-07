@@ -1,0 +1,4 @@
+# Local secrets — never index or suggest committing these
+.env
+.env.*
+!.env.example

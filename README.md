@@ -109,6 +109,14 @@ Resend is preferred when set; Gmail is used as fallback for local development on
 
 ## Deploy to Railway
 
+**Environment variables:** Production secrets live only in the Railway dashboard (or Postgres variable references). Never commit `.env` — it is gitignored. Railway deploys from GitHub code only; it does not read your local `.env` file. If Railway ever shows a localhost `DATABASE_URL` or placeholder values, delete those variables and use a Postgres **reference** instead.
+
+Run once per machine to block accidental `.env` commits:
+
+```bash
+npm run hooks:install
+```
+
 Railway can deploy directly from your GitHub `main` branch.
 
 1. **Create a Railway project** and connect your GitHub repository.
