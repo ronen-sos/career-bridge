@@ -77,6 +77,18 @@ export function defaultWeekEnd(weekStart: Date | string): Date {
   return end;
 }
 
+/** First day of the goal period immediately after a completed one. */
+export function nextGoalPeriodStart(afterWeekEnd: Date | string): Date {
+  const start = new Date(afterWeekEnd);
+  start.setDate(start.getDate() + 1);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+export function nextGoalPeriodEnd(afterWeekEnd: Date | string): Date {
+  return defaultWeekEnd(nextGoalPeriodStart(afterWeekEnd));
+}
+
 export function getWeekEnd(weekStart: Date): Date {
   const end = defaultWeekEnd(weekStart);
   end.setHours(23, 59, 59, 999);

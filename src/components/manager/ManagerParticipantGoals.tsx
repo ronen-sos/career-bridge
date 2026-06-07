@@ -7,10 +7,17 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { WeeklyGoalForm } from "@/components/goals/WeeklyGoalForm";
 import { ManagerGoalActions } from "@/components/goals/ManagerGoalActions";
+import { ManagerQuestionList } from "@/components/goals/AskManagerPanel";
 import { GoalProgressSummary } from "@/components/goals/GoalProgressSummary";
 import { CustomGoalsProgress } from "@/components/goals/CustomGoalsProgress";
-import { computeGoalProgress } from "@/lib/goals/progress";
+import {
+  computeGoalProgress,
+  formatWeekRange,
+  GOAL_STATUS_COLORS,
+  GOAL_STATUS_LABELS,
+} from "@/lib/goals/progress";
 import { computeCustomGoalProgress } from "@/lib/goals/custom-items";
+import { cn } from "@/lib/cn";
 
 type GoalData = {
   id: string;
@@ -51,10 +58,89 @@ type ParticipantQuestion = {
   user: { id: string; name: string | null; email: string };
 };
 
+function CompletedWeekCard({
+  goal,
+  participantName,
+}: {
+  goal: GoalData;
+  participantName: string;
+}) {
+  const progress = computeGoalProgress(goal, goal.dailyUpdates);
+  const customProgress = computeCustomGoalProgress(
+    goal.customItems,
+    goal.dailyUpdates,
+  );
+
+  return (
+    <Card className="border-blue-200 bg-blue-50/40">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <CardTitle>Completed period</CardTitle>
+          <CardDescription>
+            {participantName}&apos;s goals for{" "}
+            {formatWeekRange(goal.weekStart, goal.weekEnd)}
+          </CardDescription>
+        </div>
+        <span
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-medium",
+            GOAL_STATUS_COLORS.COMPLETED,
+          )}
+        >
+          {GOAL_STATUS_LABELS.COMPLETED}
+        </span>
+      </div>
+      {goal.weekReviewNotes && (
+        <p className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-sm text-blue-900">
+          <span className="font-medium">Week review: </span>
+          {goal.weekReviewNotes}
+        </p>
+      )}
+      <div className="mt-4 space-y-4">
+        <GoalProgressSummary stats={progress} status={goal.status} />
+        {customProgress.length > 0 && (
+          <CustomGoalsProgress items={customProgress} />
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ManagerQuestionsCard({
+  participantName,
+  questions,
+}: {
+  participantName: string;
+  questions: ParticipantQuestion[];
+}) {
+  const unreadQuestions = questions.filter((q) => !q.managerRead).length;
+
+  return (
+    <Card>
+      <CardTitle>
+        Questions from {participantName}
+        {unreadQuestions > 0 && (
+          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            {unreadQuestions} new
+          </span>
+        )}
+      </CardTitle>
+      <CardDescription>
+        Optional messages sent through Career Bridge. Replies appear on the
+        participant&apos;s home page.
+      </CardDescription>
+      <div className="mt-4">
+        <ManagerQuestionList questions={questions} showParticipant={false} />
+      </div>
+    </Card>
+  );
+}
+
 export function ManagerParticipantGoals({
   participantId,
   participantName,
   goal,
+  completedGoal,
   weekStart,
   weekEnd,
   questions = [],
@@ -62,6 +148,7 @@ export function ManagerParticipantGoals({
   participantId: string;
   participantName: string;
   goal: GoalData | null;
+  completedGoal?: GoalData | null;
   weekStart: string;
   weekEnd: string;
   questions?: ParticipantQuestion[];
@@ -81,9 +168,7 @@ export function ManagerParticipantGoals({
     setLoading(false);
   }
 
-  const progress = goal
-    ? computeGoalProgress(goal, goal.dailyUpdates)
-    : null;
+  const progress = goal ? computeGoalProgress(goal, goal.dailyUpdates) : null;
 
   const customProgress = goal
     ? computeCustomGoalProgress(goal.customItems, goal.dailyUpdates)
@@ -91,7 +176,7 @@ export function ManagerParticipantGoals({
 
   const unreadQuestions = questions.filter((q) => !q.managerRead).length;
 
-  if (!goal) {
+  if (!goal && !completedGoal) {
     return (
       <Card>
         <CardTitle>Weekly goals</CardTitle>
@@ -111,9 +196,46 @@ export function ManagerParticipantGoals({
     );
   }
 
+  if (!goal && completedGoal) {
+    return (
+      <div className="space-y-4">
+        <CompletedWeekCard goal={completedGoal} participantName={participantName} />
+        <Card className="border-emerald-200">
+          <CardTitle>Set up next period</CardTitle>
+          <CardDescription>
+            Create goals for {formatWeekRange(weekStart, weekEnd)}. You can
+            adjust the end date before activating.
+          </CardDescription>
+          <div className="mt-4">
+            <WeeklyGoalForm
+              goal={null}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+              participantId={participantId}
+            />
+          </div>
+        </Card>
+        <ManagerQuestionsCard
+          participantName={participantName}
+          questions={questions}
+        />
+      </div>
+    );
+  }
+
+  if (!goal) {
+    return null;
+  }
+
   if (goal.status === "DRAFT" || goal.status === "PENDING_APPROVAL") {
     return (
       <div className="space-y-4">
+        {completedGoal && (
+          <CompletedWeekCard
+            goal={completedGoal}
+            participantName={participantName}
+          />
+        )}
         <WeeklyGoalForm
           goal={goal}
           weekStart={weekStart}
@@ -129,6 +251,12 @@ export function ManagerParticipantGoals({
             Activate goals
           </Button>
         </Card>
+        {completedGoal && (
+          <ManagerQuestionsCard
+            participantName={participantName}
+            questions={questions}
+          />
+        )}
       </div>
     );
   }

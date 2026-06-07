@@ -35,6 +35,7 @@ type ParticipantWithGoal = {
   id: string;
   name: string;
   email: string;
+  needsNextPeriod?: boolean;
   goal: {
     id: string;
     status: string;
@@ -126,6 +127,9 @@ export default function ManagerPage() {
               (a) => !a.managerReviewed,
             );
             const goal = goalsByParticipant.get(participant.id);
+            const needsNextPeriod = goalsData.find(
+              (p) => p.id === participant.id,
+            )?.needsNextPeriod;
             const progress = goal
               ? computeGoalProgress(goal, goal.dailyUpdates)
               : null;
@@ -154,6 +158,10 @@ export default function ManagerPage() {
                       )}
                     >
                       {GOAL_STATUS_LABELS[goal.status] ?? goal.status}
+                    </span>
+                  ) : needsNextPeriod ? (
+                    <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                      Set up next period
                     </span>
                   ) : (
                     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">

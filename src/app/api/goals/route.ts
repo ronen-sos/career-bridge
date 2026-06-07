@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import {
   canManageParticipantGoals,
   findCurrentGoalForUser,
+  findManagerGoalContext,
   goalInclude,
 } from "@/lib/goals/access";
-import { currentGoalPeriodFilter } from "@/lib/goals/progress";
 import { weeklyGoalSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -53,23 +53,22 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         email: true,
-        weeklyGoals: {
-          where: currentGoalPeriodFilter(),
-          include: goalInclude,
-          orderBy: { weekStart: "desc" },
-          take: 1,
-        },
       },
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json(
-      participants.map((p) => ({
-        ...p,
-        goal: p.weeklyGoals[0] ?? null,
-        weeklyGoals: undefined,
-      })),
+    const withGoals = await Promise.all(
+      participants.map(async (p) => {
+        const context = await findManagerGoalContext(p.id);
+        return {
+          ...p,
+          goal: context.goal,
+          needsNextPeriod: !context.goal && !!context.completedGoal,
+        };
+      }),
     );
+
+    return NextResponse.json(withGoals);
   }
 
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
