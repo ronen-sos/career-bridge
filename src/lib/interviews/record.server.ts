@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { findCurrentGoalForUser } from "@/lib/goals/access";
+import { findParticipantCurrentGoal } from "@/lib/goals/access";
 import { isDateInWeek } from "@/lib/goals/progress";
 import {
   resolveCompany,
@@ -30,7 +30,7 @@ async function syncDailyInterviewCount(
   interviewedAt: Date,
   interviewCount: number,
 ) {
-  const goal = await findCurrentGoalForUser(userId);
+  const goal = await findParticipantCurrentGoal(userId);
   if (!goal || goal.status !== "ACTIVE") return;
   if (!isDateInWeek(interviewedAt, goal.weekStart, goal.weekEnd)) return;
 
@@ -233,7 +233,7 @@ export async function recordJobInterview(input: {
   });
 
   const weekInterviewCount = await (async () => {
-    const goal = await findCurrentGoalForUser(input.userId);
+    const goal = await findParticipantCurrentGoal(input.userId);
     if (!goal) return 1;
     return countInterviewsInPeriod(
       input.userId,

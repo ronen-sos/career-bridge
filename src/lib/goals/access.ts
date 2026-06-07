@@ -71,7 +71,14 @@ type GoalWithRelations = Prisma.WeeklyGoalGetPayload<{
   include: typeof goalInclude;
 }>;
 
-export async function findCurrentGoalForUser(userId: string) {
+function participantGoalToday(): Date {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return today;
+}
+
+/** Non-completed goal whose date range includes today. */
+export async function findInPeriodGoalForUser(userId: string) {
   return db.weeklyGoal.findFirst({
     where: {
       userId,
@@ -81,6 +88,43 @@ export async function findCurrentGoalForUser(userId: string) {
     orderBy: { weekStart: "desc" },
     include: goalInclude,
   });
+}
+
+/**
+ * Goal the participant (or their activity) should attach to: in-period,
+ * the next activated period, or a draft awaiting activation.
+ */
+export async function findParticipantCurrentGoal(userId: string) {
+  const inPeriod = await findInPeriodGoalForUser(userId);
+  if (inPeriod) return inPeriod;
+
+  const today = participantGoalToday();
+
+  const upcomingActive = await db.weeklyGoal.findFirst({
+    where: {
+      userId,
+      status: "ACTIVE",
+      weekStart: { gt: today },
+    },
+    orderBy: { weekStart: "asc" },
+    include: goalInclude,
+  });
+  if (upcomingActive) return upcomingActive;
+
+  return db.weeklyGoal.findFirst({
+    where: {
+      userId,
+      status: { in: ["DRAFT", "PENDING_APPROVAL"] },
+      weekEnd: { gte: today },
+    },
+    orderBy: { weekStart: "asc" },
+    include: goalInclude,
+  });
+}
+
+/** @deprecated Prefer findInPeriodGoalForUser or findParticipantCurrentGoal. */
+export async function findCurrentGoalForUser(userId: string) {
+  return findInPeriodGoalForUser(userId);
 }
 
 export type ManagerGoalContext = {
@@ -93,7 +137,7 @@ export type ManagerGoalContext = {
 export async function findManagerGoalContext(
   userId: string,
 ): Promise<ManagerGoalContext> {
-  const goal = await findCurrentGoalForUser(userId);
+  const goal = await findInPeriodGoalForUser(userId);
 
   if (goal) {
     return {

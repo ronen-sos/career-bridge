@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { signOut } from "@/lib/auth";
 import { requireAuth } from "@/lib/session";
 import { db } from "@/lib/db";
-import { findCurrentGoalForUser } from "@/lib/goals/access";
-import { computeGoalProgress, formatWeekRange, toDateInputValue } from "@/lib/goals/progress";
+import { findParticipantCurrentGoal } from "@/lib/goals/access";
+import { computeGoalProgress, formatWeekRange, isDateInWeek, toDateInputValue } from "@/lib/goals/progress";
 import { computeCustomGoalProgress } from "@/lib/goals/custom-items";
 import { computeGoalPace } from "@/lib/goals/pace";
 import { countApplicationsInPeriod } from "@/lib/applications/record.server";
@@ -126,7 +126,7 @@ export default async function DashboardPage() {
   }
 
   const [goal, participantUser, questions] = await Promise.all([
-    findCurrentGoalForUser(session.user.id),
+    findParticipantCurrentGoal(session.user.id),
     db.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -229,6 +229,10 @@ export default async function DashboardPage() {
     (update) => toDateInputValue(update.date) === todayKey,
   );
 
+  const goalPeriodActive =
+    goal?.status === "ACTIVE" &&
+    isDateInWeek(new Date(), goal.weekStart, goal.weekEnd);
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <Header
@@ -282,7 +286,7 @@ export default async function DashboardPage() {
 
         <ParticipantDashboardActions
           hoursLog={
-            goal?.status === "ACTIVE"
+            goalPeriodActive
               ? {
                   goalId: goal.id,
                   weekStart: toDateInputValue(goal.weekStart),
@@ -298,7 +302,7 @@ export default async function DashboardPage() {
               : null
           }
           customGoalsLog={
-            goal?.status === "ACTIVE" && goal.customItems.length > 0
+            goalPeriodActive && goal.customItems.length > 0
               ? {
                   goalId: goal.id,
                   customItems: goal.customItems.map((item) => ({

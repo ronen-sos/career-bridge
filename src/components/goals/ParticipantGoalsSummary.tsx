@@ -1,9 +1,11 @@
+import { formatDate } from "@/lib/format";
 import { ProgressRing } from "@/components/goals/GoalProgressSummary";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   GOAL_STATUS_COLORS,
   GOAL_STATUS_LABELS,
   formatWeekRange,
+  isDateInWeek,
 } from "@/lib/goals/progress";
 import type { GoalProgress } from "@/lib/goals/progress";
 import type { CustomGoalProgress } from "@/lib/goals/custom-items";
@@ -31,6 +33,8 @@ export function ParticipantGoalsSummary({
   weekReviewNotes,
 }: ParticipantGoalsSummaryProps) {
   const customCompleted = customItems.filter((item) => item.completed).length;
+  const periodStarted = isDateInWeek(new Date(), weekStart, weekEnd);
+  const periodUpcoming = status === "ACTIVE" && !periodStarted;
 
   return (
     <Card>
@@ -117,6 +121,13 @@ export function ParticipantGoalsSummary({
         <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-900">
           <span className="font-medium">Week review: </span>
           {weekReviewNotes}
+        </p>
+      )}
+
+      {periodUpcoming && (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Your manager activated these goals. Progress tracking opens on{" "}
+          {formatDate(weekStart)}.
         </p>
       )}
 

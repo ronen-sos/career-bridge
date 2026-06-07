@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   canManageParticipantGoals,
-  findCurrentGoalForUser,
   findManagerGoalContext,
+  findParticipantCurrentGoal,
   goalInclude,
 } from "@/lib/goals/access";
 import { weeklyGoalSchema } from "@/lib/validations";
@@ -32,12 +32,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const goal = await findCurrentGoalForUser(participantIdParam);
+    const goal = await findParticipantCurrentGoal(participantIdParam);
     return NextResponse.json(goal);
   }
 
   if (session.user.role === "PARTICIPANT") {
-    const goal = await findCurrentGoalForUser(session.user.id);
+    const goal = await findParticipantCurrentGoal(session.user.id);
     return NextResponse.json(goal);
   }
 

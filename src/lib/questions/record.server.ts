@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email/client";
 import { buildQuestionEmail } from "@/lib/email/question-email";
 import { buildQuestionReplyEmail } from "@/lib/email/question-reply-email";
-import { findCurrentGoalForUser } from "@/lib/goals/access";
+import { findParticipantCurrentGoal } from "@/lib/goals/access";
 import { hasUnreadManagerReply } from "@/lib/questions/unread";
 
 export async function createParticipantQuestion(userId: string, question: string) {
@@ -20,7 +20,7 @@ export async function createParticipantQuestion(userId: string, question: string
     throw new Error("No program manager is assigned to your account.");
   }
 
-  const goal = await findCurrentGoalForUser(userId);
+  const goal = await findParticipantCurrentGoal(userId);
 
   const record = await db.participantQuestion.create({
     data: {
