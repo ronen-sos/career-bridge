@@ -1,6 +1,11 @@
 import type { CustomGoalProgress } from "@/lib/goals/custom-items";
 import type { GoalProgress } from "@/lib/goals/progress";
-import { toDateInputValue } from "@/lib/goals/progress";
+import {
+  countCalendarDaysInclusive,
+  countDaysElapsedInPeriod,
+  parseCalendarDate,
+  toDateInputValue,
+} from "@/lib/goals/dates";
 import {
   computeCompositeProgressFraction,
   isWeekGoalsComplete,
@@ -36,30 +41,16 @@ export function computeGoalPaceStatus(
   return "behind";
 }
 
-function countDaysInPeriod(weekStart: Date, weekEnd: Date): number {
-  const start = new Date(weekStart);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(weekEnd);
-  end.setHours(0, 0, 0, 0);
-  return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+function countDaysInPeriod(weekStart: Date | string, weekEnd: Date | string): number {
+  return countCalendarDaysInclusive(weekStart, weekEnd);
 }
 
 function countDaysElapsed(
-  weekStart: Date,
-  weekEnd: Date,
+  weekStart: Date | string,
+  weekEnd: Date | string,
   today: Date = new Date(),
 ): number {
-  const start = new Date(weekStart);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(weekEnd);
-  end.setHours(23, 59, 59, 999);
-  const t = new Date(today);
-  t.setHours(12, 0, 0, 0);
-
-  if (t < start) return 0;
-  if (t > end) return countDaysInPeriod(weekStart, weekEnd);
-
-  return Math.floor((t.getTime() - start.getTime()) / 86_400_000) + 1;
+  return countDaysElapsedInPeriod(weekStart, weekEnd, today);
 }
 
 export function computeOverallProgress(
@@ -92,8 +83,8 @@ export function computeGoalPace(
     today = new Date(),
   } = options;
 
-  const weekStart = new Date(period.weekStart);
-  const weekEnd = new Date(period.weekEnd);
+  const weekStart = parseCalendarDate(period.weekStart);
+  const weekEnd = parseCalendarDate(period.weekEnd);
   const daysTotal = countDaysInPeriod(weekStart, weekEnd);
   const daysElapsed = Math.min(
     countDaysElapsed(weekStart, weekEnd, today),

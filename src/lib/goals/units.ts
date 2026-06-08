@@ -121,18 +121,19 @@ export function computeCategoryProgressRatios(
 }
 
 /**
- * Weekly goal progress: average of each goal type's capped completion.
- * Categories do not substitute for one another (extra interviews won't
- * offset missing applications).
+ * Weekly goal progress: share of total weighted units completed.
+ * Each category is capped at its target so extra interviews cannot
+ * offset missing applications.
  */
 export function computeCompositeProgressFraction(
   stats: GoalProgress,
   customGoals: CustomGoalUnits[] = [],
 ): number {
-  const ratios = computeCategoryProgressRatios(stats, customGoals);
-  if (ratios.length === 0) return 0;
+  const target = computeTargetCompositeUnits(stats, customGoals);
+  if (target <= 0) return 0;
 
-  return ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
+  const completed = computeCompletedCompositeUnits(stats, customGoals);
+  return Math.min(1, completed / target);
 }
 
 /** True only when every set weekly target is fully met (no category may be skipped). */

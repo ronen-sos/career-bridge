@@ -8,6 +8,7 @@ import {
   findParticipantCurrentGoal,
   goalInclude,
 } from "@/lib/goals/access";
+import { parseCalendarDate } from "@/lib/goals/dates";
 import { weeklyGoalSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -110,8 +111,8 @@ export async function POST(request: Request) {
   }
 
   const participantId = parsed.data.participantId;
-  const weekStart = new Date(parsed.data.weekStart);
-  const weekEnd = new Date(parsed.data.weekEnd);
+  const weekStart = parseCalendarDate(parsed.data.weekStart);
+  const weekEnd = parseCalendarDate(parsed.data.weekEnd);
 
   const existing = await db.weeklyGoal.findUnique({
     where: {

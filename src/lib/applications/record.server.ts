@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { findParticipantCurrentGoal } from "@/lib/goals/access";
+import { periodBounds } from "@/lib/goals/dates";
 import { isDateInWeek } from "@/lib/goals/progress";
 import {
   resolveCompany,
@@ -11,10 +12,7 @@ export async function countApplicationsInPeriod(
   weekStart: Date,
   weekEnd: Date,
 ) {
-  const start = new Date(weekStart);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(weekEnd);
-  end.setHours(23, 59, 59, 999);
+  const { start, end } = periodBounds(weekStart, weekEnd);
 
   return db.jobApplication.count({
     where: {

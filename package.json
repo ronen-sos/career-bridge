@@ -18,6 +18,7 @@
     "db:studio": "prisma studio",
     "auth:check": "tsx scripts/verify-auth-setup.ts",
     "email:test": "tsx scripts/test-email.ts",
+    "test": "tsx --test src/lib/goals/*.test.ts",
     "hooks:install": "chmod +x .githooks/pre-commit .cursor/hooks/block-env-git.mjs && git config core.hooksPath .githooks"
   },
   "dependencies": {

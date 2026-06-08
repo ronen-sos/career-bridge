@@ -1,10 +1,19 @@
 import { getWeekStart } from "@/lib/format";
 import {
+  addCalendarDays,
+  endOfCalendarDay,
+  isDateInPeriod,
+  parseCalendarDate,
+  toDateInputValue,
+} from "@/lib/goals/dates";
+import {
   sumHourTargets,
   sumHourTotals,
   type EmploymentHourTarget,
   type EmploymentHourTotal,
 } from "@/lib/goals/hours";
+
+export { toDateInputValue };
 
 export type GoalProgress = {
   applications: number;
@@ -71,18 +80,12 @@ export function computeGoalProgress(
 }
 
 export function defaultWeekEnd(weekStart: Date | string): Date {
-  const end = new Date(weekStart);
-  end.setDate(end.getDate() + 6);
-  end.setHours(0, 0, 0, 0);
-  return end;
+  return addCalendarDays(weekStart, 6);
 }
 
 /** First day of the goal period immediately after a completed one. */
 export function nextGoalPeriodStart(afterWeekEnd: Date | string): Date {
-  const start = new Date(afterWeekEnd);
-  start.setDate(start.getDate() + 1);
-  start.setHours(0, 0, 0, 0);
-  return start;
+  return addCalendarDays(afterWeekEnd, 1);
 }
 
 export function nextGoalPeriodEnd(afterWeekEnd: Date | string): Date {
@@ -90,25 +93,18 @@ export function nextGoalPeriodEnd(afterWeekEnd: Date | string): Date {
 }
 
 export function getWeekEnd(weekStart: Date): Date {
-  const end = defaultWeekEnd(weekStart);
-  end.setHours(23, 59, 59, 999);
-  return end;
+  return endOfCalendarDay(defaultWeekEnd(weekStart));
 }
 
 export function formatWeekRange(
   weekStart: Date | string,
   weekEnd?: Date | string,
 ): string {
-  const start = new Date(weekStart);
-  const end = weekEnd ? new Date(weekEnd) : getWeekEnd(start);
+  const start = parseCalendarDate(weekStart);
+  const end = weekEnd ? parseCalendarDate(weekEnd) : defaultWeekEnd(weekStart);
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return `${fmt(start)} – ${fmt(end)}`;
-}
-
-export function toDateInputValue(date: Date | string): string {
-  const d = new Date(date);
-  return d.toISOString().split("T")[0]!;
 }
 
 export function isDateInWeek(
@@ -116,17 +112,12 @@ export function isDateInWeek(
   weekStart: Date | string,
   weekEnd?: Date | string,
 ): boolean {
-  const d = new Date(date);
-  const start = new Date(weekStart);
-  start.setHours(0, 0, 0, 0);
-  const end = weekEnd ? new Date(weekEnd) : getWeekEnd(start);
-  end.setHours(23, 59, 59, 999);
-  d.setHours(12, 0, 0, 0);
-  return d >= start && d <= end;
+  const end = weekEnd ?? defaultWeekEnd(weekStart);
+  return isDateInPeriod(date, weekStart, end);
 }
 
 export function currentGoalPeriodFilter(date: Date = new Date()) {
-  const today = new Date(date);
+  const today = parseCalendarDate(date);
   today.setHours(12, 0, 0, 0);
   return {
     weekStart: { lte: today },
