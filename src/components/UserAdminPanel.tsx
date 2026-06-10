@@ -13,6 +13,7 @@ type User = {
   role: "PARTICIPANT" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
   managerId: string | null;
   invitedAt: string | null;
+  lastLoginAt: string | null;
   manager: { id: string; name: string; email: string } | null;
   organization: { id: string; name: string } | null;
 };
@@ -31,7 +32,7 @@ const ROLE_COLORS: Record<User["role"], string> = {
   SUPER_ADMIN: "bg-stone-900 text-white",
 };
 
-function formatInvitedAt(value: string | null): string | null {
+function formatTimestamp(value: string | null): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -55,6 +56,7 @@ export function UserAdminPanel() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   const allManagers = users.filter(
     (u) => u.role === "MANAGER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN",
@@ -199,6 +201,28 @@ export function UserAdminPanel() {
 
     await loadUsers();
     router.refresh();
+  }
+
+  async function viewAsUser(user: User) {
+    setImpersonatingId(user.id);
+    const res = await fetch("/api/super-admin/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(
+        typeof data.error === "string"
+          ? data.error
+          : "Could not start viewing as this user.",
+      );
+      setImpersonatingId(null);
+      return;
+    }
+
+    window.location.href = "/dashboard";
   }
 
   async function deleteUser(id: string, name: string) {
@@ -391,10 +415,19 @@ export function UserAdminPanel() {
                   )}
                   {user.invitedAt ? (
                     <p className="mt-1 text-xs text-emerald-700">
-                      Invited {formatInvitedAt(user.invitedAt)}
+                      Invited {formatTimestamp(user.invitedAt)}
                     </p>
                   ) : (
                     <p className="mt-1 text-xs text-stone-500">Not invited yet</p>
+                  )}
+                  {user.lastLoginAt ? (
+                    <p className="mt-0.5 text-xs text-stone-500">
+                      Last sign-in: {formatTimestamp(user.lastLoginAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-xs text-stone-400">
+                      Never signed in
+                    </p>
                   )}
                 </div>
                 <span
@@ -439,6 +472,18 @@ export function UserAdminPanel() {
                       </option>
                     ))}
                   </select>
+                )}
+
+                {isSuperAdminViewer && user.role !== "SUPER_ADMIN" && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={impersonatingId !== null}
+                    onClick={() => viewAsUser(user)}
+                  >
+                    {impersonatingId === user.id ? "Switching…" : "View as"}
+                  </Button>
                 )}
 
                 <Button

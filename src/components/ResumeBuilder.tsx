@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Download, FileText, Sparkles } from "lucide-react";
+import { CheckCircle2, Download, FileText, Search, Sparkles } from "lucide-react";
 
 import {
   CompanyPicker,
@@ -204,9 +204,9 @@ export function ResumeBuilder({
         <div>
           <CardTitle>Build a tailored resume</CardTitle>
           <CardDescription>
-            Choose the company and position, paste the job description, and
-            we&apos;ll create a tailored resume optimized for that role. It
-            downloads as .docx and is saved here for 60 days.
+            Start from a real job posting you found online. We&apos;ll use it
+            to create a resume tailored to that exact role. It downloads as
+            .docx and is saved here for 60 days.
             {hasProfileData && (
               <>
                 {" "}
@@ -237,6 +237,33 @@ export function ResumeBuilder({
         </div>
       ) : (
         <form onSubmit={handleGenerate} className="mt-4 space-y-4">
+          <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-sky-100 p-2">
+                <Search className="h-4 w-4 text-sky-700" aria-hidden />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-sky-950">
+                  First, find a job posting online
+                </p>
+                <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-sky-900">
+                  <li>
+                    Search a job site like Indeed, LinkedIn, or a company&apos;s
+                    careers page for a job you want to apply to.
+                  </li>
+                  <li>
+                    Enter that job&apos;s <strong>company name</strong> and{" "}
+                    <strong>job title</strong> in the fields below.
+                  </li>
+                  <li>
+                    Copy the <strong>full job description</strong> from the
+                    posting and paste it in the box at the bottom.
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <CompanyPicker
               value={company}
@@ -299,7 +326,10 @@ export function ResumeBuilder({
               htmlFor="jobDescription"
               className="mb-1 block text-sm font-medium text-stone-700"
             >
-              Job description
+              Job description{" "}
+              <span className="font-normal text-stone-500">
+                (copied from the job posting)
+              </span>
             </label>
             <textarea
               id="jobDescription"
@@ -307,11 +337,12 @@ export function ResumeBuilder({
               rows={10}
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Paste the full job posting here — include responsibilities, requirements, and qualifications…"
+              placeholder="Paste the full job description from the posting here — include responsibilities, requirements, and qualifications…"
               className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
             />
             <p className="mt-1 text-xs text-stone-500">
-              {jobDescription.length} characters (minimum 50)
+              {jobDescription.length} characters (minimum 50). The more of the
+              posting you paste, the better the resume matches the job.
             </p>
           </div>
 

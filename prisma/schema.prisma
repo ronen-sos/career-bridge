@@ -73,6 +73,8 @@ model User {
   participantQuestions ParticipantQuestion[] @relation("ParticipantQuestions")
   managedQuestions   ParticipantQuestion[] @relation("ManagedQuestions")
   invitedAt       DateTime?
+  lastLoginAt     DateTime?
+  welcomeSeenAt   DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

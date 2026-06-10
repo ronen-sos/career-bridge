@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 
 import { authConfig } from "@/lib/auth.config";
 import { db } from "@/lib/db";
+import { getImpersonationTargetId } from "@/lib/impersonation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -36,12 +37,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return "/login?error=NotRegistered";
         }
 
-        if (user.image && user.image !== dbUser.image) {
-          await db.user.update({
-            where: { id: dbUser.id },
-            data: { image: user.image },
-          });
-        }
+        await db.user.update({
+          where: { id: dbUser.id },
+          data: {
+            lastLoginAt: new Date(),
+            ...(user.image && user.image !== dbUser.image
+              ? { image: user.image }
+              : {}),
+          },
+        });
 
         console.info(`[auth] signIn allowed: ${email} (${dbUser.role})`);
         return true;
@@ -80,8 +84,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role as string;
         session.user.organizationId =
           (token.organizationId as string | null | undefined) ?? null;
+        session.user.impersonatedBy = null;
         if (token.name) session.user.name = token.name as string;
         if (token.email) session.user.email = token.email as string;
+
+        // Super admins can view the app as another user. The cookie is only
+        // honored when the real JWT role is SUPER_ADMIN.
+        if (token.role === "SUPER_ADMIN") {
+          const targetId = await getImpersonationTargetId();
+          if (targetId && targetId !== token.id) {
+            try {
+              const target = await db.user.findUnique({
+                where: { id: targetId },
+              });
+              if (target && target.role !== "SUPER_ADMIN") {
+                session.user.id = target.id;
+                session.user.role = target.role;
+                session.user.organizationId = target.organizationId;
+                session.user.name = target.name;
+                session.user.email = target.email;
+                session.user.image = target.image;
+                session.user.impersonatedBy = (token.email as string) ?? "";
+              }
+            } catch (error) {
+              console.error("[auth] impersonation lookup failed:", error);
+            }
+          }
+        }
       }
       return session;
     },
