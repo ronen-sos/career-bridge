@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getEmailProvider, isEmailConfigured } from "@/lib/email/client";
-import { isAdminRole, orgScope } from "@/lib/roles";
+import { isAdminRole, isSuperAdmin, orgScope } from "@/lib/roles";
 import { createInvitedUser } from "@/lib/users/invite";
 import { createUserSchema } from "@/lib/validations";
 
@@ -21,19 +21,32 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const users = await db.user.findMany({
-    where: orgScope(session.user),
-    orderBy: [{ role: "asc" }, { name: "asc" }],
-    include: {
-      manager: { select: { id: true, name: true, email: true } },
-      organization: { select: { id: true, name: true } },
-    },
-  });
+  const viewerIsSuperAdmin = isSuperAdmin(session.user.role);
+
+  const [users, organizations] = await Promise.all([
+    db.user.findMany({
+      where: orgScope(session.user),
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+      include: {
+        manager: { select: { id: true, name: true, email: true } },
+        organization: { select: { id: true, name: true } },
+      },
+    }),
+    viewerIsSuperAdmin
+      ? db.organization.findMany({
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return NextResponse.json({
     users,
     emailConfigured: isEmailConfigured(),
     emailProvider: getEmailProvider(),
+    viewerIsSuperAdmin,
+    viewerOrganizationId: session.user.organizationId,
+    organizations,
   });
 }
 
@@ -63,7 +76,23 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!session.user.organizationId) {
+  let organizationId = session.user.organizationId;
+
+  if (isSuperAdmin(session.user.role) && parsed.data.organizationId) {
+    const organization = await db.organization.findUnique({
+      where: { id: parsed.data.organizationId },
+      select: { id: true },
+    });
+    if (!organization) {
+      return NextResponse.json(
+        { error: "Selected organization was not found." },
+        { status: 400 },
+      );
+    }
+    organizationId = organization.id;
+  }
+
+  if (!organizationId) {
     return NextResponse.json(
       {
         error:
@@ -76,7 +105,7 @@ export async function POST(request: Request) {
   try {
     const result = await createInvitedUser(parsed.data, {
       inviterName: session.user.name ?? "Your program admin",
-      organizationId: session.user.organizationId,
+      organizationId,
     });
 
     return NextResponse.json(result, { status: 201 });

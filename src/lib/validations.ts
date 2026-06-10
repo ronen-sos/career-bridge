@@ -259,6 +259,8 @@ export const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.enum(["PARTICIPANT", "MANAGER", "ADMIN"]),
   managerId: z.string().optional().nullable(),
+  /** Target organization — honored only for super admins. */
+  organizationId: z.string().optional().nullable(),
   sendInvite: z.boolean().optional(),
   personalNote: z.string().max(500, "Keep your note under 500 characters").optional(),
 });

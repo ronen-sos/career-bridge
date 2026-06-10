@@ -42,6 +42,11 @@ function formatInvitedAt(value: string | null): string | null {
 export function UserAdminPanel() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [isSuperAdminViewer, setIsSuperAdminViewer] = useState(false);
+  const [inviteOrgId, setInviteOrgId] = useState<string>("");
   const [emailConfigured, setEmailConfigured] = useState(true);
   const [emailProvider, setEmailProvider] = useState<"resend" | "gmail" | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,9 +56,21 @@ export function UserAdminPanel() {
   const [saving, setSaving] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
-  const managers = users.filter(
+  const allManagers = users.filter(
     (u) => u.role === "MANAGER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN",
   );
+
+  // Participants can only be assigned managers from the same organization.
+  const inviteManagers = isSuperAdminViewer
+    ? allManagers.filter((m) => m.organization?.id === inviteOrgId)
+    : allManagers;
+
+  function managersForUser(user: User) {
+    if (!isSuperAdminViewer) return allManagers;
+    return allManagers.filter(
+      (m) => m.organization?.id === user.organization?.id,
+    );
+  }
 
   async function loadUsers() {
     setLoading(true);
@@ -66,6 +83,11 @@ export function UserAdminPanel() {
     }
     const data = await res.json();
     setUsers(data.users ?? data);
+    setOrganizations(data.organizations ?? []);
+    setIsSuperAdminViewer(data.viewerIsSuperAdmin ?? false);
+    setInviteOrgId(
+      (current) => current || data.viewerOrganizationId || "",
+    );
     setEmailConfigured(data.emailConfigured ?? true);
     setEmailProvider(data.emailProvider ?? null);
     setLoading(false);
@@ -96,6 +118,7 @@ export function UserAdminPanel() {
           name: form.get("name"),
           role,
           managerId: role === "PARTICIPANT" && managerId ? managerId : null,
+          organizationId: isSuperAdminViewer ? inviteOrgId || null : null,
           sendInvite: true,
           personalNote: personalNote || undefined,
         }),
@@ -249,6 +272,30 @@ export function UserAdminPanel() {
             />
           </div>
 
+          {isSuperAdminViewer && organizations.length > 0 && (
+            <div>
+              <label
+                htmlFor="inviteOrganizationId"
+                className="mb-1 block text-sm font-medium text-stone-700"
+              >
+                Organization
+              </label>
+              <select
+                id="inviteOrganizationId"
+                required
+                value={inviteOrgId}
+                onChange={(e) => setInviteOrgId(e.target.value)}
+                className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+              >
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label htmlFor="role" className="mb-1 block text-sm font-medium text-stone-700">
               Role
@@ -266,7 +313,7 @@ export function UserAdminPanel() {
             </select>
           </div>
 
-          {managers.length > 0 && (
+          {inviteManagers.length > 0 && (
             <div>
               <label htmlFor="managerId" className="mb-1 block text-sm font-medium text-stone-700">
                 Assigned manager (participants only)
@@ -278,7 +325,7 @@ export function UserAdminPanel() {
                 defaultValue=""
               >
                 <option value="">None</option>
-                {managers.map((m) => (
+                {inviteManagers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.email})
                   </option>
@@ -332,6 +379,11 @@ export function UserAdminPanel() {
                 <div>
                   <p className="font-medium text-stone-900">{user.name}</p>
                   <p className="text-sm text-stone-600">{user.email}</p>
+                  {isSuperAdminViewer && user.organization && (
+                    <p className="mt-1 text-xs font-medium text-emerald-800">
+                      {user.organization.name}
+                    </p>
+                  )}
                   {user.manager && (
                     <p className="mt-1 text-xs text-stone-500">
                       Manager: {user.manager.name}
@@ -370,7 +422,7 @@ export function UserAdminPanel() {
                   </select>
                 )}
 
-                {user.role === "PARTICIPANT" && managers.length > 0 && (
+                {user.role === "PARTICIPANT" && managersForUser(user).length > 0 && (
                   <select
                     value={user.managerId ?? ""}
                     onChange={(e) =>
@@ -381,7 +433,7 @@ export function UserAdminPanel() {
                     className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
                   >
                     <option value="">No manager</option>
-                    {managers.map((m) => (
+                    {managersForUser(user).map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>

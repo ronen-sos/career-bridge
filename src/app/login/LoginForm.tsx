@@ -43,10 +43,7 @@ export function LoginForm() {
   return (
     <div className="flex min-h-dvh bg-stone-50">
       <div className="hidden flex-1 flex-col justify-center bg-gradient-to-br from-emerald-800 to-emerald-950 px-12 py-16 text-white lg:flex">
-        <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
-          Bridge to Thrive
-        </p>
-        <h1 className="mt-3 text-4xl font-bold leading-tight">Career Path</h1>
+        <h1 className="text-4xl font-bold leading-tight">Career Path</h1>
         <p className="mt-4 max-w-md text-lg text-emerald-100">
           Accountability and resources for your job search journey.
         </p>

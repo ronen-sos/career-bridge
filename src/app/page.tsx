@@ -9,10 +9,7 @@ export default function HomePage() {
       <div className="mx-auto w-full max-w-lg md:max-w-5xl lg:max-w-6xl">
         <header className="px-6 py-8 md:px-10 md:py-12 lg:py-16">
           <div className="md:max-w-2xl">
-            <p className="text-sm font-medium uppercase tracking-wide text-emerald-800">
-              Bridge to Thrive
-            </p>
-            <h1 className="mt-2 text-4xl font-bold leading-tight text-stone-900 md:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold leading-tight text-stone-900 md:text-5xl lg:text-6xl">
               Career Path
             </h1>
             <p className="mt-3 max-w-md text-lg text-stone-600 md:mt-4 md:max-w-xl md:text-xl">
@@ -49,16 +46,7 @@ export default function HomePage() {
             </Link>
 
             <p className="mt-4 text-center text-xs text-stone-500 md:text-sm">
-              A program of{" "}
-              <a
-                href="https://bridgetothrive.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-stone-700"
-              >
-                Bridge to Thrive
-              </a>
-              , supporting men in recovery on the path to meaningful careers.
+              Supporting job seekers on the path to meaningful careers.
             </p>
           </div>
         </main>
