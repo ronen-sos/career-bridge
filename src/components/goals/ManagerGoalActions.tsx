@@ -146,7 +146,7 @@ export function ManagerGoalActions({
           )}
         </CardTitle>
         <CardDescription>
-          Optional messages sent through Career Bridge. Replies appear on the
+          Optional messages sent through Career Path. Replies appear on the
           participant&apos;s home page.
         </CardDescription>
         <div className="mt-4">

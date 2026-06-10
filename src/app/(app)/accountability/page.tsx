@@ -40,6 +40,8 @@ export default async function AccountabilityPage() {
         <div className="mt-6">
           <BridgeProgressCard
             goalId={bridgePace.goalId}
+            weekStart={bridgePace.weekStart}
+            weekEnd={bridgePace.weekEnd}
             weekRange={bridgePace.weekRange}
             pace={bridgePace.pace}
           />

@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getEmailProvider, isEmailConfigured } from "@/lib/email/client";
+import { isAdminRole, orgScope } from "@/lib/roles";
 import { createInvitedUser } from "@/lib/users/invite";
 import { createUserSchema } from "@/lib/validations";
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdminRole(session.user.role)) {
     return null;
   }
   return session;
@@ -21,9 +22,11 @@ export async function GET() {
   }
 
   const users = await db.user.findMany({
+    where: orgScope(session.user),
     orderBy: [{ role: "asc" }, { name: "asc" }],
     include: {
       manager: { select: { id: true, name: true, email: true } },
+      organization: { select: { id: true, name: true } },
     },
   });
 
@@ -60,11 +63,21 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const result = await createInvitedUser(
-      parsed.data,
-      session.user.name ?? "Your program admin",
+  if (!session.user.organizationId) {
+    return NextResponse.json(
+      {
+        error:
+          "Your account is not assigned to an organization, so it cannot invite users here.",
+      },
+      { status: 400 },
     );
+  }
+
+  try {
+    const result = await createInvitedUser(parsed.data, {
+      inviterName: session.user.name ?? "Your program admin",
+      organizationId: session.user.organizationId,
+    });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

@@ -17,7 +17,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   const question = await db.participantQuestion.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: {
+        select: { id: true, name: true, email: true, organizationId: true },
+      },
       manager: { select: { name: true } },
     },
   });
@@ -28,9 +30,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const isManager =
     session.user.role === "MANAGER" && question.managerId === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin =
+    session.user.role === "ADMIN" &&
+    question.user.organizationId === session.user.organizationId;
+  const isSuper = session.user.role === "SUPER_ADMIN";
 
-  if (!isManager && !isAdmin) {
+  if (!isManager && !isAdmin && !isSuper) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

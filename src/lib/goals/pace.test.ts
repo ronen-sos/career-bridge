@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { parseCalendarDate } from "@/lib/goals/dates";
 import type { GoalProgress } from "@/lib/goals/progress";
-import { computeGoalPace } from "@/lib/goals/pace";
+import { adjustGoalPaceForLocalToday, computeGoalPace } from "@/lib/goals/pace";
 
 const emptyStats: GoalProgress = {
   applications: 0,
@@ -38,5 +38,25 @@ describe("computeGoalPace", () => {
 
     assert.equal(pace.daysElapsed, 7);
     assert.equal(pace.expectedFraction, 1);
+  });
+
+  it("adjusts expected pace when server used UTC tomorrow", () => {
+    const serverPace = computeGoalPace(
+      { weekStart: "2025-06-08", weekEnd: "2025-06-13" },
+      emptyStats,
+      { today: parseCalendarDate("2025-06-10") },
+    );
+
+    assert.equal(serverPace.daysElapsed, 3);
+    assert.equal(serverPace.expectedFraction, 0.5);
+
+    const localPace = adjustGoalPaceForLocalToday(
+      { weekStart: "2025-06-08", weekEnd: "2025-06-13" },
+      serverPace,
+      parseCalendarDate("2025-06-09"),
+    );
+
+    assert.equal(localPace.daysElapsed, 2);
+    assert.ok(Math.abs(localPace.expectedFraction - 2 / 6) < 0.001);
   });
 });

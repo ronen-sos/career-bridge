@@ -4,6 +4,7 @@ import {
   countCalendarDaysInclusive,
   countDaysElapsedInPeriod,
   parseCalendarDate,
+  todayInLocalCalendar,
   toDateInputValue,
 } from "@/lib/goals/dates";
 import {
@@ -123,5 +124,36 @@ export function computeGoalPace(
     dailyGoalMet,
     celebrateToday,
     weekComplete,
+  };
+}
+
+/** Recompute day-based pace fields using the viewer's local calendar day. */
+export function adjustGoalPaceForLocalToday(
+  period: { weekStart: Date | string; weekEnd: Date | string },
+  pace: GoalPace,
+  today: Date = todayInLocalCalendar(),
+): GoalPace {
+  const weekStart = parseCalendarDate(period.weekStart);
+  const weekEnd = parseCalendarDate(period.weekEnd);
+  const daysTotal = countCalendarDaysInclusive(weekStart, weekEnd);
+  const daysElapsed = Math.min(
+    countDaysElapsedInPeriod(weekStart, weekEnd, today),
+    daysTotal,
+  );
+  const expectedFraction =
+    daysTotal > 0 ? Math.min(1, daysElapsed / daysTotal) : 0;
+  const status = computeGoalPaceStatus(pace.overallProgress, expectedFraction);
+  const dailyGoalMet = hasReachedDailyGoal(status);
+
+  return {
+    ...pace,
+    daysElapsed,
+    daysTotal,
+    expectedFraction,
+    expectedPercent: Math.round(expectedFraction * 100),
+    status,
+    dailyGoalMet,
+    celebrateToday:
+      pace.weekComplete || (dailyGoalMet && pace.hasTodayUpdate),
   };
 }

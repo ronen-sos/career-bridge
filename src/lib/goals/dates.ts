@@ -1,36 +1,79 @@
 const DATE_INPUT_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+function calendarDateFromParts(year: number, month: number, day: number): Date {
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+/** Postgres @db.Date values arrive as UTC midnight — read the UTC calendar day. */
+function isUtcDateOnlyInstant(date: Date): boolean {
+  return (
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0
+  );
+}
+
+function calendarPartsFromDate(date: Date): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  if (isUtcDateOnlyInstant(date)) {
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+    };
+  }
+
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  };
+}
+
 /** Parse a calendar date (YYYY-MM-DD or Date) to local midnight. */
 export function parseCalendarDate(input: Date | string): Date {
   if (typeof input === "string") {
     const match = DATE_INPUT_RE.exec(input.trim());
     if (match) {
-      const year = Number(match[1]);
-      const month = Number(match[2]);
-      const day = Number(match[3]);
-      return new Date(year, month - 1, day, 0, 0, 0, 0);
+      return calendarDateFromParts(
+        Number(match[1]),
+        Number(match[2]),
+        Number(match[3]),
+      );
     }
   }
 
-  const parsed = new Date(input);
-  return new Date(
-    parsed.getFullYear(),
-    parsed.getMonth(),
-    parsed.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
+  const parsed = typeof input === "string" ? new Date(input) : input;
+  const { year, month, day } = calendarPartsFromDate(parsed);
+  return calendarDateFromParts(year, month, day);
 }
 
-/** Format a date as YYYY-MM-DD in the local timezone. */
+/** Format a date as YYYY-MM-DD. */
 export function toDateInputValue(date: Date | string): string {
-  const d = parseCalendarDate(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  if (typeof date === "string") {
+    const match = DATE_INPUT_RE.exec(date.trim());
+    if (match) return date.trim();
+  }
+
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  const { year, month, day } = calendarPartsFromDate(parsed);
+  const m = String(month).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
+
+/** Today's calendar date at local midnight (browser or Node local TZ). */
+export function todayInLocalCalendar(): Date {
+  const now = new Date();
+  return calendarDateFromParts(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    now.getDate(),
+  );
 }
 
 export function endOfCalendarDay(date: Date | string): Date {

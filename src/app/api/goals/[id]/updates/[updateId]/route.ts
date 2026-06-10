@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireGoalAccess } from "@/lib/goals/access";
+import { isManagerRole } from "@/lib/roles";
 import { dailyUpdateReviewSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string; updateId: string }> };
@@ -13,9 +14,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-  if (!isManager) {
+  if (!isManagerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

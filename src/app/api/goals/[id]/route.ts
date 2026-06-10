@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { goalInclude, requireGoalAccess } from "@/lib/goals/access";
+import { isManagerRole } from "@/lib/roles";
 import { goalActionSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -53,8 +54,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
+  const isManager = isManagerRole(session.user.role);
 
   const { action, managerApprovalNotes, weekReviewNotes } = parsed.data;
 

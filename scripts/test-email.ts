@@ -33,7 +33,7 @@ async function main() {
 
   const result = await sendEmail({
     to,
-    subject: "Career Bridge — email test",
+    subject: "Career Path — email test",
     text: "If you received this, invite emails are working.",
     html: "<p>If you received this, invite emails are working.</p>",
   });

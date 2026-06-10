@@ -273,7 +273,14 @@ export type EmployerStatRow = {
   }>;
 };
 
-export async function getEmployerInterviewStats(): Promise<EmployerStatRow[]> {
+export async function getEmployerInterviewStats(options?: {
+  /** Restrict counts to users of one organization (omit for all orgs). */
+  organizationId?: string;
+}): Promise<EmployerStatRow[]> {
+  const userFilter = options?.organizationId
+    ? { user: { organizationId: options.organizationId } }
+    : {};
+
   const companies = await db.companyCatalog.findMany({
     orderBy: { name: "asc" },
     include: {
@@ -288,20 +295,22 @@ export async function getEmployerInterviewStats(): Promise<EmployerStatRow[]> {
     await Promise.all([
       db.jobApplication.groupBy({
         by: ["companyId", "positionId"],
+        where: { ...userFilter },
         _count: { _all: true },
       }),
       db.jobInterview.groupBy({
         by: ["companyId", "positionId"],
+        where: { ...userFilter },
         _count: { _all: true },
       }),
       db.jobInterview.groupBy({
         by: ["companyId", "positionId"],
-        where: { applicationId: { not: null } },
+        where: { applicationId: { not: null }, ...userFilter },
         _count: { _all: true },
       }),
       db.jobInterview.groupBy({
         by: ["companyId"],
-        where: { linkType: "NO_PRIOR_APPLICATION" },
+        where: { linkType: "NO_PRIOR_APPLICATION", ...userFilter },
         _count: { _all: true },
       }),
     ]);

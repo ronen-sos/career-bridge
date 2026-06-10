@@ -5,18 +5,25 @@ import {
   getParticipantOverview,
 } from "@/lib/manager/require-participant-access";
 import { db } from "@/lib/db";
+import { isManagerRole, isSuperAdmin } from "@/lib/roles";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-async function canAccess(participantId: string, userId: string, role: string) {
+async function canAccess(
+  participantId: string,
+  user: { id: string; role: string; organizationId: string | null },
+) {
   const participant = await db.user.findUnique({
     where: { id: participantId },
-    select: { role: true, managerId: true },
+    select: { role: true, managerId: true, organizationId: true },
   });
 
   if (!participant || participant.role !== "PARTICIPANT") return false;
-  if (role === "ADMIN") return true;
-  return participant.managerId === userId;
+  if (isSuperAdmin(user.role)) return true;
+  if (user.role === "ADMIN") {
+    return participant.organizationId === user.organizationId;
+  }
+  return participant.managerId === user.id;
 }
 
 export async function GET(_request: Request, context: RouteContext) {
@@ -25,14 +32,12 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-  if (!isManager) {
+  if (!isManagerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await context.params;
-  const allowed = await canAccess(id, session.user.id, session.user.role);
+  const allowed = await canAccess(id, session.user);
   if (!allowed) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

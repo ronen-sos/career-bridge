@@ -4,6 +4,7 @@ import { computeCustomGoalProgress } from "@/lib/goals/custom-items";
 import { findParticipantCurrentGoal } from "@/lib/goals/access";
 import { computeGoalPace } from "@/lib/goals/pace";
 import { computeGoalProgress, formatWeekRange } from "@/lib/goals/progress";
+import { toDateInputValue } from "@/lib/goals/dates";
 import { countInterviewsInPeriod } from "@/lib/interviews/record.server";
 
 export async function getParticipantGoalPace(userId: string) {
@@ -58,6 +59,8 @@ export async function getParticipantGoalPace(userId: string) {
 
   return {
     goalId: goal.id,
+    weekStart: toDateInputValue(goal.weekStart),
+    weekEnd: toDateInputValue(goal.weekEnd),
     weekRange: formatWeekRange(goal.weekStart, goal.weekEnd),
     pace,
   };

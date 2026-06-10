@@ -60,11 +60,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
+          token.organizationId = dbUser.organizationId;
           token.name = dbUser.name;
           token.email = email;
         } else if (user || account) {
           token.id = undefined;
           token.role = undefined;
+          token.organizationId = undefined;
         }
       } catch (error) {
         console.error("[auth] jwt database error:", error);
@@ -76,6 +78,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.organizationId =
+          (token.organizationId as string | null | undefined) ?? null;
         if (token.name) session.user.name = token.name as string;
         if (token.email) session.user.email = token.email as string;
       }

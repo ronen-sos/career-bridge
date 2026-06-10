@@ -9,6 +9,7 @@ import {
   goalInclude,
 } from "@/lib/goals/access";
 import { parseCalendarDate } from "@/lib/goals/dates";
+import { isManagerRole, orgScope } from "@/lib/roles";
 import { weeklyGoalSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -20,8 +21,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const participantIdParam = searchParams.get("participantId");
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
+  const isManager = isManagerRole(session.user.role);
 
   if (participantIdParam && isManager) {
     const allowed = await canManageParticipantGoals(
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const participantFilter =
       session.user.role === "MANAGER"
         ? { role: "PARTICIPANT" as const, managerId: session.user.id }
-        : { role: "PARTICIPANT" as const };
+        : { role: "PARTICIPANT" as const, ...orgScope(session.user) };
 
     const participants = await db.user.findMany({
       where: participantFilter,
@@ -81,10 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-
-  if (!isManager) {
+  if (!isManagerRole(session.user.role)) {
     return NextResponse.json(
       { error: "Only program managers can set goals" },
       { status: 403 },

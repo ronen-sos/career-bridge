@@ -9,13 +9,23 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const organization = await prisma.organization.upsert({
+    where: { id: "org-bridge-to-thrive" },
+    update: { name: "Bridge to Thrive" },
+    create: {
+      id: "org-bridge-to-thrive",
+      name: "Bridge to Thrive",
+    },
+  });
+
   const manager = await prisma.user.upsert({
     where: { email: "manager@bridgetothrive.org" },
-    update: {},
+    update: { organizationId: organization.id },
     create: {
       email: "manager@bridgetothrive.org",
       name: "Program Manager",
       role: "MANAGER",
+      organizationId: organization.id,
     },
   });
 
@@ -23,23 +33,26 @@ async function main() {
     where: { email: "steve@thriveinmn.com" },
     update: {
       name: "Steve",
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
+      organizationId: organization.id,
     },
     create: {
       email: "steve@thriveinmn.com",
       name: "Steve",
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
+      organizationId: organization.id,
     },
   });
 
   await prisma.user.upsert({
     where: { email: "participant@bridgetothrive.org" },
-    update: {},
+    update: { organizationId: organization.id },
     create: {
       email: "participant@bridgetothrive.org",
       name: "Demo Participant",
       role: "PARTICIPANT",
       managerId: steve.id,
+      organizationId: organization.id,
     },
   });
 
@@ -115,7 +128,7 @@ async function main() {
 
   console.log("Seed completed.");
   console.log("Registered users (sign in with matching Google account):");
-  console.log("  Admin:       steve@thriveinmn.com");
+  console.log("  Super admin: steve@thriveinmn.com");
   console.log("  Manager:     manager@bridgetothrive.org");
   console.log("  Participant: participant@bridgetothrive.org");
 }

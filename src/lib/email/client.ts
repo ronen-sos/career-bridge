@@ -46,7 +46,7 @@ function getGmailFromAddress(): string {
     throw new Error("Gmail is not configured.");
   }
 
-  const name = process.env.EMAIL_FROM_NAME?.trim() || "Career Bridge";
+  const name = process.env.EMAIL_FROM_NAME?.trim() || "Career Path";
   return `"${name}" <${credentials.user}>`;
 }
 

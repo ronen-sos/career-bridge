@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { db } from "@/lib/db";
+import { isSuperAdmin } from "@/lib/roles";
 import { resumeRetentionCutoff } from "@/lib/resume/retention";
 import { requireRole } from "@/lib/session";
 
@@ -9,17 +10,23 @@ export async function requireParticipantAccess(participantId: string) {
 
   const participant = await db.user.findUnique({
     where: { id: participantId },
-    select: { id: true, role: true, managerId: true },
+    select: { id: true, role: true, managerId: true, organizationId: true },
   });
 
   if (!participant || participant.role !== "PARTICIPANT") {
     notFound();
   }
 
-  const isAdmin = session.user.role === "ADMIN";
+  const isOrgAdmin =
+    session.user.role === "ADMIN" &&
+    participant.organizationId === session.user.organizationId;
   const isAssignedManager = participant.managerId === session.user.id;
 
-  if (!isAdmin && !isAssignedManager) {
+  if (
+    !isSuperAdmin(session.user.role) &&
+    !isOrgAdmin &&
+    !isAssignedManager
+  ) {
     notFound();
   }
 

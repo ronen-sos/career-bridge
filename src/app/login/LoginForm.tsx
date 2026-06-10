@@ -10,7 +10,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 
 const ERROR_MESSAGES: Record<string, string> = {
   NotRegistered:
-    "Your Google account is not registered with Career Bridge. Contact your program manager to get access.",
+    "Your Google account is not registered with Career Path. Contact your program manager to get access.",
   AccessDenied:
     "Google blocked sign-in. Add steve@thriveinmn.com as a Test user in Google Cloud Console → OAuth consent screen, then try again in an incognito window.",
   DatabaseError:
@@ -41,25 +41,25 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-full bg-stone-50">
+    <div className="flex min-h-dvh bg-stone-50">
       <div className="hidden flex-1 flex-col justify-center bg-gradient-to-br from-emerald-800 to-emerald-950 px-12 py-16 text-white lg:flex">
         <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
           Bridge to Thrive
         </p>
-        <h1 className="mt-3 text-4xl font-bold leading-tight">Career Bridge</h1>
+        <h1 className="mt-3 text-4xl font-bold leading-tight">Career Path</h1>
         <p className="mt-4 max-w-md text-lg text-emerald-100">
-          Accountability and resources for your job search journey in St. Paul.
+          Accountability and resources for your job search journey.
         </p>
       </div>
 
-      <div className="flex min-h-full flex-1 flex-col">
+      <div className="flex flex-1 flex-col">
         <header className="px-6 py-8 text-center lg:px-10 lg:py-10">
           <Link href="/" className="text-sm text-emerald-800">
             ← Back
           </Link>
           <h1 className="mt-4 text-2xl font-bold text-stone-900 lg:hidden">Sign in</h1>
           <p className="mt-2 text-stone-600 lg:mt-4 lg:text-lg">
-            Sign in to Career Bridge
+            Sign in to Career Path
           </p>
         </header>
 
@@ -68,7 +68,7 @@ export function LoginForm() {
             <CardTitle>Welcome back</CardTitle>
             <CardDescription>
               Sign in with your Google account. Only emails registered with the
-              program can access Career Bridge.
+              program can access Career Path.
             </CardDescription>
 
             <div className="mt-6 space-y-4">

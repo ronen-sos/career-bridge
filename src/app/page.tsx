@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-full flex-col bg-gradient-to-b from-emerald-50 to-stone-50">
+    <div className="flex min-h-dvh flex-col bg-gradient-to-b from-emerald-50 to-stone-50">
       <div className="mx-auto w-full max-w-lg md:max-w-5xl lg:max-w-6xl">
         <header className="px-6 py-8 md:px-10 md:py-12 lg:py-16">
           <div className="md:max-w-2xl">
@@ -13,10 +13,10 @@ export default function HomePage() {
               Bridge to Thrive
             </p>
             <h1 className="mt-2 text-4xl font-bold leading-tight text-stone-900 md:text-5xl lg:text-6xl">
-              Career Bridge
+              Career Path
             </h1>
             <p className="mt-3 max-w-md text-lg text-stone-600 md:mt-4 md:max-w-xl md:text-xl">
-              Accountability and resources for your job search journey in St. Paul.
+              Accountability and resources for your job search journey.
             </p>
           </div>
         </header>

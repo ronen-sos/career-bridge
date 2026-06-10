@@ -24,6 +24,7 @@ import {
   markDailyCelebrationShown,
 } from "@/lib/goals/daily-celebration.client";
 import { scrollParticipantBridgeToTop } from "@/lib/goals/bridge-layout";
+import { useLocalGoalPace } from "@/lib/goals/local-goal-pace.client";
 import type { GoalPace, GoalPaceStatus } from "@/lib/goals/pace";
 import { cn } from "@/lib/cn";
 
@@ -64,14 +65,19 @@ const STATUS_CONFIG: Record<
 };
 
 export function BridgeProgressCard({
-  pace,
+  pace: serverPace,
+  weekStart,
+  weekEnd,
   weekRange,
   goalId,
 }: {
   pace: GoalPace;
+  weekStart: string;
+  weekEnd: string;
   weekRange: string;
   goalId: string;
 }) {
+  const pace = useLocalGoalPace(weekStart, weekEnd, serverPace);
   const bridge = useProgressBridge();
   const config = STATUS_CONFIG[pace.status];
   const StatusIcon = config.icon;
@@ -83,16 +89,20 @@ export function BridgeProgressCard({
   const inlineMessage = useBridgeInlineMessage();
 
   useEffect(() => {
-    bridge?.syncFromServer({ goalId, weekRange, pace });
+    bridge?.syncFromServer({ goalId, weekRange, weekStart, weekEnd, pace });
   }, [
     bridge,
     goalId,
     weekRange,
+    weekStart,
+    weekEnd,
     pace.overallProgress,
     pace.expectedFraction,
     pace.status,
     pace.weekComplete,
     pace.overallPercent,
+    pace.daysElapsed,
+    pace.daysTotal,
   ]);
 
   useEffect(() => {

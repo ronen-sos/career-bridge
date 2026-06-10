@@ -58,7 +58,7 @@ export async function createParticipantQuestion(userId: string, question: string
 export async function listQuestionsForUser(
   userId: string,
   role: string,
-  options: { unreadOnly?: boolean } = {},
+  options: { unreadOnly?: boolean; organizationId?: string | null } = {},
 ) {
   if (role === "PARTICIPANT") {
     return db.participantQuestion.findMany({
@@ -83,9 +83,14 @@ export async function listQuestionsForUser(
     });
   }
 
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "SUPER_ADMIN") {
     return db.participantQuestion.findMany({
-      where: options.unreadOnly ? { managerRead: false } : undefined,
+      where: {
+        ...(options.unreadOnly ? { managerRead: false } : {}),
+        ...(role === "ADMIN"
+          ? { user: { organizationId: options.organizationId ?? null } }
+          : {}),
+      },
       orderBy: [{ managerRead: "asc" }, { createdAt: "desc" }],
       include: {
         user: { select: { id: true, name: true, email: true } },
@@ -187,8 +192,16 @@ export async function listQuestionsForParticipant(participantId: string) {
   });
 }
 
-export async function countUnreadQuestionsAll() {
+export async function countUnreadQuestionsAll(options?: {
+  /** Restrict to questions from one organization's participants. */
+  organizationId?: string;
+}) {
   return db.participantQuestion.count({
-    where: { managerRead: false },
+    where: {
+      managerRead: false,
+      ...(options?.organizationId
+        ? { user: { organizationId: options.organizationId } }
+        : {}),
+    },
   });
 }

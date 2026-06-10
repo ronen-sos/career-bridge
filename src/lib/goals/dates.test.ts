@@ -44,6 +44,34 @@ describe("calendar goal periods", () => {
     assert.equal(isDateInPeriod("2025-06-13", nextStart, "2025-06-20"), false);
   });
 
+  it("reads Postgres @db.Date values without shifting the calendar day", () => {
+    const prismaDate = new Date("2025-06-08T00:00:00.000Z");
+    assert.equal(toDateInputValue(prismaDate), "2025-06-08");
+    assert.equal(
+      countCalendarDaysInclusive(prismaDate, "2025-06-13"),
+      6,
+    );
+  });
+
+  it("uses local calendar parts for non-midnight instants", () => {
+    const localNoon = new Date(2025, 5, 9, 12, 0, 0, 0);
+    assert.equal(toDateInputValue(localNoon), "2025-06-09");
+  });
+
+  it("counts elapsed days for Jun 8–13 on Jun 9 as day 2 of 6", () => {
+    const periodStart = "2025-06-08";
+    const periodEnd = "2025-06-13";
+    assert.equal(countCalendarDaysInclusive(periodStart, periodEnd), 6);
+    assert.equal(
+      countDaysElapsedInPeriod(
+        periodStart,
+        periodEnd,
+        parseCalendarDate("2025-06-09"),
+      ),
+      2,
+    );
+  });
+
   it("parses YYYY-MM-DD without UTC day shift", () => {
     assert.equal(toDateInputValue(parseCalendarDate("2025-06-13")), "2025-06-13");
     assert.equal(

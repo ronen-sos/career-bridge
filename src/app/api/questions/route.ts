@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const questions = await listQuestionsForUser(
     session.user.id,
     session.user.role,
-    { unreadOnly },
+    { unreadOnly, organizationId: session.user.organizationId },
   );
 
   return NextResponse.json(

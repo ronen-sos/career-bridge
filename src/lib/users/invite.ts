@@ -9,13 +9,15 @@ type CreateUserInput = z.infer<typeof createUserSchema>;
 export async function validateManagerId(
   role: CreateUserInput["role"],
   managerId: string | null | undefined,
+  organizationId: string,
 ): Promise<string | null> {
   if (role !== "PARTICIPANT" || !managerId) return null;
 
   const manager = await db.user.findFirst({
     where: {
       id: managerId,
-      role: { in: ["MANAGER", "ADMIN"] },
+      role: { in: ["MANAGER", "ADMIN", "SUPER_ADMIN"] },
+      organizationId,
     },
   });
 
@@ -35,7 +37,7 @@ export async function sendUserInvite({
 }: {
   recipientName: string;
   recipientEmail: string;
-  role: CreateUserInput["role"];
+  role: CreateUserInput["role"] | "SUPER_ADMIN";
   inviterName: string;
   personalNote?: string;
 }) {
@@ -57,8 +59,9 @@ export async function sendUserInvite({
 
 export async function createInvitedUser(
   data: CreateUserInput,
-  inviterName: string,
+  options: { inviterName: string; organizationId: string },
 ) {
+  const { inviterName, organizationId } = options;
   const email = data.email.toLowerCase();
 
   const existing = await db.user.findUnique({ where: { email } });
@@ -66,13 +69,18 @@ export async function createInvitedUser(
     throw new Error("A user with this email already exists.");
   }
 
-  const managerId = await validateManagerId(data.role, data.managerId);
+  const managerId = await validateManagerId(
+    data.role,
+    data.managerId,
+    organizationId,
+  );
 
   const user = await db.user.create({
     data: {
       email,
       name: data.name,
       role: data.role,
+      organizationId,
       managerId: data.role === "PARTICIPANT" ? managerId : null,
     },
     include: {

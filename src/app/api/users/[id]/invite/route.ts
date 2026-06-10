@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { isEmailConfigured } from "@/lib/email/client";
+import { isAdminRole, isSuperAdmin } from "@/lib/roles";
 import { resendUserInvite } from "@/lib/users/invite";
 import { resendInviteSchema } from "@/lib/validations";
 
@@ -13,7 +15,7 @@ type RouteContext = {
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdminRole(session.user.role)) {
     return null;
   }
   return session;
@@ -44,6 +46,16 @@ export async function POST(request: Request, context: RouteContext) {
       { error: parsed.error.flatten().fieldErrors },
       { status: 400 },
     );
+  }
+
+  if (!isSuperAdmin(session.user.role)) {
+    const target = await db.user.findUnique({
+      where: { id },
+      select: { organizationId: true },
+    });
+    if (!target || target.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
   }
 
   try {

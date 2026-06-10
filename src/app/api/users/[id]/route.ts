@@ -2,14 +2,28 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isAdminRole, isSuperAdmin } from "@/lib/roles";
 import { updateUserSchema } from "@/lib/validations";
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdminRole(session.user.role)) {
     return null;
   }
   return session;
+}
+
+/** Org admins may only manage non-super-admin users inside their own org. */
+function canManageUser(
+  session: { user: { role: string; organizationId: string | null } },
+  target: { role: string; organizationId: string | null },
+): boolean {
+  if (isSuperAdmin(session.user.role)) return true;
+  if (isSuperAdmin(target.role)) return false;
+  return (
+    target.organizationId !== null &&
+    target.organizationId === session.user.organizationId
+  );
 }
 
 export async function PATCH(
@@ -37,9 +51,20 @@ export async function PATCH(
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  if (id === session.user.id && parsed.data.role && parsed.data.role !== "ADMIN") {
+  if (!canManageUser(session, existing)) {
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
+  }
+
+  if (id === session.user.id && parsed.data.role && !isAdminRole(parsed.data.role)) {
     return NextResponse.json(
       { error: "You cannot remove your own admin access." },
+      { status: 400 },
+    );
+  }
+
+  if (isSuperAdmin(existing.role) && parsed.data.role) {
+    return NextResponse.json(
+      { error: "The super admin role cannot be changed here." },
       { status: 400 },
     );
   }
@@ -50,7 +75,8 @@ export async function PATCH(
     const manager = await db.user.findFirst({
       where: {
         id: parsed.data.managerId,
-        role: { in: ["MANAGER", "ADMIN"] },
+        role: { in: ["MANAGER", "ADMIN", "SUPER_ADMIN"] },
+        organizationId: existing.organizationId,
       },
     });
     if (!manager) {
@@ -101,6 +127,10 @@ export async function DELETE(
 
   const existing = await db.user.findUnique({ where: { id } });
   if (!existing) {
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
+  }
+
+  if (!canManageUser(session, existing)) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 

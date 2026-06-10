@@ -2,14 +2,23 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { getEmployerInterviewStats } from "@/lib/interviews/record.server";
+import { isAdminRole, isSuperAdmin } from "@/lib/roles";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdminRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const employers = await getEmployerInterviewStats();
+  if (!isSuperAdmin(session.user.role) && !session.user.organizationId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const employers = await getEmployerInterviewStats(
+    isSuperAdmin(session.user.role)
+      ? undefined
+      : { organizationId: session.user.organizationId! },
+  );
 
   const totals = employers.reduce(
     (acc, row) => ({

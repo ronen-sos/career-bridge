@@ -8,10 +8,10 @@ const sourceSans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Career Bridge | Bridge to Thrive",
+  title: "Career Path | Bridge to Thrive",
   description:
-    "Job search accountability and career resources for Bridge to Thrive program participants in St. Paul, MN.",
-  applicationName: "Career Bridge",
+    "Job search accountability and career resources for program participants.",
+  applicationName: "Career Path",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Career Bridge",
+    title: "Career Path",
   },
 };
 

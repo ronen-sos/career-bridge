@@ -17,12 +17,21 @@ function NavBadge({ count }: { count: number }) {
   );
 }
 
+export type OrgBranding = {
+  id: string;
+  name: string;
+  hasLogo: boolean;
+  logoVersion: string;
+};
+
 export function DesktopNav({
   role,
   logBadgeCount = 0,
+  organization = null,
 }: {
   role: string;
   logBadgeCount?: number;
+  organization?: OrgBranding | null;
 }) {
   const pathname = usePathname();
   const links = getNavLinks(role);
@@ -32,10 +41,18 @@ export function DesktopNav({
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-stone-200 bg-white md:flex">
       <div className="border-b border-stone-100 px-6 py-6">
+        {organization?.hasLogo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`/api/organizations/${organization.id}/logo?v=${encodeURIComponent(organization.logoVersion)}`}
+            alt={`${organization.name} logo`}
+            className="mb-3 max-h-12 w-auto max-w-full object-contain"
+          />
+        )}
         <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
-          Bridge to Thrive
+          {organization?.name ?? "Career Path"}
         </p>
-        <p className="mt-1 text-lg font-bold text-stone-900">Career Bridge</p>
+        <p className="mt-1 text-lg font-bold text-stone-900">Career Path</p>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">

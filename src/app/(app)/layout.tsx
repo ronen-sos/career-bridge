@@ -1,6 +1,7 @@
 import { DesktopNav } from "@/components/DesktopNav";
 import { MobileNav } from "@/components/MobileNav";
 import { Providers } from "@/components/Providers";
+import { db } from "@/lib/db";
 import { countUnreadRepliesForParticipant } from "@/lib/questions/record.server";
 import { requireAuth } from "@/lib/session";
 
@@ -15,12 +16,32 @@ export default async function AppLayout({
       ? await countUnreadRepliesForParticipant(session.user.id)
       : 0;
 
+  const organization = session.user.organizationId
+    ? await db.organization.findUnique({
+        where: { id: session.user.organizationId },
+        select: { id: true, name: true, logoMimeType: true, updatedAt: true },
+      })
+    : null;
+
+  const orgBranding = organization
+    ? {
+        id: organization.id,
+        name: organization.name,
+        hasLogo: Boolean(organization.logoMimeType),
+        logoVersion: organization.updatedAt.toISOString(),
+      }
+    : null;
+
   return (
     <Providers session={session} logBadgeCount={logBadgeCount}>
       {session?.user && (
-        <DesktopNav role={session.user.role} logBadgeCount={logBadgeCount} />
+        <DesktopNav
+          role={session.user.role}
+          logBadgeCount={logBadgeCount}
+          organization={orgBranding}
+        />
       )}
-      <div className="min-h-full bg-stone-50 pb-24 md:pl-64 md:pb-8">
+      <div className="min-h-dvh bg-stone-50 pb-24 md:pl-64 md:pb-8">
         <div className="mx-auto w-full max-w-lg md:max-w-4xl lg:max-w-6xl">
           {children}
         </div>

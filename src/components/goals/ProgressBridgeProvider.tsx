@@ -11,6 +11,10 @@ import {
 
 import { BridgeScene } from "@/components/goals/BridgeScene";
 import { ConfettiCelebration } from "@/components/goals/ConfettiCelebration";
+import {
+  normalizeGoalPaceSnapshot,
+  type GoalPaceSnapshot,
+} from "@/lib/goals/local-goal-pace.client";
 import type { GoalPace } from "@/lib/goals/pace";
 import {
   computeGoalPaceStatus,
@@ -29,11 +33,7 @@ const PROGRESS_EPSILON = 0.0005;
 const INLINE_MESSAGE_MS = 8000;
 const WALK_PULSE_MS = 2000;
 
-type PaceSnapshot = {
-  goalId: string;
-  weekRange: string;
-  pace: GoalPace;
-};
+type PaceSnapshot = GoalPaceSnapshot;
 
 type ProgressBridgeContextValue = {
   goalId: string | null;
@@ -143,10 +143,11 @@ export function ProgressBridgeProvider({
   }, []);
 
   const applyPaceSnapshot = useCallback((snapshot: PaceSnapshot) => {
-    setGoalId(snapshot.goalId);
-    setPace(snapshot.pace);
-    settledProgressRef.current = snapshot.pace.overallProgress;
-    setDisplayProgress(snapshot.pace.overallProgress);
+    const normalized = normalizeGoalPaceSnapshot(snapshot);
+    setGoalId(normalized.goalId);
+    setPace(normalized.pace);
+    settledProgressRef.current = normalized.pace.overallProgress;
+    setDisplayProgress(normalized.pace.overallProgress);
   }, []);
 
   useEffect(() => {
@@ -289,44 +290,46 @@ export function ProgressBridgeProvider({
     const data = (await res.json()) as PaceSnapshot | null;
     if (!data?.pace) return false;
 
+    const snapshot = normalizeGoalPaceSnapshot(data);
+
     const previous =
       snapshotRef.current ??
       settledProgressRef.current ??
-      data.pace.overallProgress;
-    const next = data.pace.overallProgress;
+      snapshot.pace.overallProgress;
+    const next = snapshot.pace.overallProgress;
 
     snapshotRef.current = null;
 
     const previousStatus = computeGoalPaceStatus(
       previous,
-      data.pace.expectedFraction,
+      snapshot.pace.expectedFraction,
     );
     const crossedDailyGoal =
       !hasReachedDailyGoal(previousStatus) &&
-      hasReachedDailyGoal(data.pace.status);
+      hasReachedDailyGoal(snapshot.pace.status);
     const progressIncreased = next > previous + PROGRESS_EPSILON;
 
     let celebrated = false;
     if (crossedDailyGoal) {
-      celebrated = triggerDailyCelebration(data);
+      celebrated = triggerDailyCelebration(snapshot);
     }
 
     const movementMessage = crossedDailyGoal
-      ? dailyCelebrationMessage(data.pace.weekComplete)
+      ? dailyCelebrationMessage(snapshot.pace.weekComplete)
       : "You're moving forward!";
 
     if (progressIncreased) {
-      runProgressAnimation(previous, next, data, movementMessage);
+      runProgressAnimation(previous, next, snapshot, movementMessage);
       return true;
     }
 
     if (crossedDailyGoal) {
-      runWalkPulse(data, movementMessage);
-      applyPaceSnapshot(data);
+      runWalkPulse(snapshot, movementMessage);
+      applyPaceSnapshot(snapshot);
       return celebrated || true;
     }
 
-    applyPaceSnapshot(data);
+    applyPaceSnapshot(snapshot);
     return celebrated;
   }, [
     applyPaceSnapshot,

@@ -1,6 +1,6 @@
-# Career Bridge
+# Career Path
 
-A mobile-first web application for [Bridge to Thrive](https://bridgetothrive.org)'s Career Bridge program — helping men in recovery track job search progress and access career resources.
+A mobile-first web application for [Bridge to Thrive](https://bridgetothrive.org)'s Career Path program — helping men in recovery track job search progress and access career resources.
 
 ## Features
 
@@ -45,7 +45,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Sign in
 
-Career Bridge uses **Google sign-in**. Only emails pre-registered in the database can access the app. After seeding, these accounts are registered:
+Career Path uses **Google sign-in**. Only emails pre-registered in the database can access the app. After seeding, these accounts are registered:
 
 | Role        | Email                          |
 |-------------|--------------------------------|
@@ -62,7 +62,7 @@ Sign in with a Google account that uses one of those email addresses.
 2. Create a project (or select an existing one)
 3. Open **APIs & Services → OAuth consent screen**
    - Choose **External** (or Internal if using Google Workspace)
-   - Fill in app name: `Career Bridge`
+   - Fill in app name: `Career Path`
    - Add your support email
    - Add scopes: `email`, `profile`, `openid` (defaults are fine)
 4. Open **APIs & Services → Credentials → Create Credentials → OAuth client ID**
@@ -98,7 +98,7 @@ Add participants and managers to the database with their Google email addresses.
 2. Verify your domain or use their test sender for development.
 3. Add to Railway:
    - `RESEND_API_KEY`
-   - `EMAIL_FROM` — e.g. `Career Bridge <onboarding@thrivehomes.life>`
+   - `EMAIL_FROM` — e.g. `Career Path <onboarding@thrivehomes.life>`
 
 **Local dev:** Gmail SMTP works on your machine:
 
@@ -164,4 +164,4 @@ prisma/
 
 ## License
 
-Private — Bridge to Thrive / Career Bridge program.
+Private — Bridge to Thrive / Career Path program.

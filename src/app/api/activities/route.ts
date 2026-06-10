@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { recordJobApplication } from "@/lib/applications/record.server";
+import { isAdminRole, isManagerRole, orgScope } from "@/lib/roles";
 import { activitySchema } from "@/lib/validations";
 
 export async function GET() {
@@ -11,10 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-
-  if (isManager) {
+  if (isManagerRole(session.user.role)) {
     const participants = await db.user.findMany({
       where: { role: "PARTICIPANT", managerId: session.user.id },
       include: {
@@ -23,9 +21,9 @@ export async function GET() {
       },
     });
 
-    if (participants.length === 0 && session.user.role === "ADMIN") {
+    if (participants.length === 0 && isAdminRole(session.user.role)) {
       const allParticipants = await db.user.findMany({
-        where: { role: "PARTICIPANT" },
+        where: { role: "PARTICIPANT", ...orgScope(session.user) },
         include: {
           activities: { orderBy: { date: "desc" }, take: 10 },
           weeklyGoals: { orderBy: { weekStart: "desc" }, take: 1 },
@@ -121,13 +119,30 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isManager =
-    session.user.role === "MANAGER" || session.user.role === "ADMIN";
-  if (!isManager) {
+  if (!isManagerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { activityId, managerNotes } = await request.json();
+
+  const existing = await db.jobSearchActivity.findUnique({
+    where: { id: activityId },
+    select: {
+      user: { select: { managerId: true, organizationId: true } },
+    },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const allowed =
+    session.user.role === "SUPER_ADMIN" ||
+    (session.user.role === "ADMIN" &&
+      existing.user.organizationId === session.user.organizationId) ||
+    existing.user.managerId === session.user.id;
+  if (!allowed) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const activity = await db.jobSearchActivity.update({
     where: { id: activityId },

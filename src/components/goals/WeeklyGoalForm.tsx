@@ -440,7 +440,7 @@ export function WeeklyGoalForm({
             rows={2}
             defaultValue={goal?.notes ?? ""}
             disabled={!editable}
-            placeholder="e.g. Focus on warehouse and logistics roles in St. Paul"
+            placeholder="e.g. Focus on warehouse and logistics roles this week"
             className="w-full rounded-xl border border-stone-300 px-3 py-3 text-base disabled:bg-stone-50"
           />
         </div>

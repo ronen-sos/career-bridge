@@ -10,22 +10,25 @@ type User = {
   id: string;
   email: string;
   name: string;
-  role: "PARTICIPANT" | "MANAGER" | "ADMIN";
+  role: "PARTICIPANT" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
   managerId: string | null;
   invitedAt: string | null;
   manager: { id: string; name: string; email: string } | null;
+  organization: { id: string; name: string } | null;
 };
 
 const ROLE_LABELS: Record<User["role"], string> = {
   PARTICIPANT: "Participant",
   MANAGER: "Manager",
   ADMIN: "Admin",
+  SUPER_ADMIN: "Super Admin",
 };
 
 const ROLE_COLORS: Record<User["role"], string> = {
   PARTICIPANT: "bg-blue-100 text-blue-800",
   MANAGER: "bg-emerald-100 text-emerald-800",
   ADMIN: "bg-purple-100 text-purple-800",
+  SUPER_ADMIN: "bg-stone-900 text-white",
 };
 
 function formatInvitedAt(value: string | null): string | null {
@@ -48,7 +51,9 @@ export function UserAdminPanel() {
   const [saving, setSaving] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
-  const managers = users.filter((u) => u.role === "MANAGER" || u.role === "ADMIN");
+  const managers = users.filter(
+    (u) => u.role === "MANAGER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN",
+  );
 
   async function loadUsers() {
     setLoading(true);
@@ -174,7 +179,7 @@ export function UserAdminPanel() {
   }
 
   async function deleteUser(id: string, name: string) {
-    if (!confirm(`Remove ${name} from Career Bridge?`)) return;
+    if (!confirm(`Remove ${name} from Career Path?`)) return;
 
     const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
     if (!res.ok) {
@@ -348,20 +353,22 @@ export function UserAdminPanel() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <select
-                  value={user.role}
-                  onChange={(e) =>
-                    updateUser(user.id, {
-                      role: e.target.value as User["role"],
-                      managerId: e.target.value === "PARTICIPANT" ? user.managerId : null,
-                    })
-                  }
-                  className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-                >
-                  <option value="PARTICIPANT">Participant</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
+                {user.role !== "SUPER_ADMIN" && (
+                  <select
+                    value={user.role}
+                    onChange={(e) =>
+                      updateUser(user.id, {
+                        role: e.target.value as User["role"],
+                        managerId: e.target.value === "PARTICIPANT" ? user.managerId : null,
+                      })
+                    }
+                    className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
+                  >
+                    <option value="PARTICIPANT">Participant</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                )}
 
                 {user.role === "PARTICIPANT" && managers.length > 0 && (
                   <select
@@ -392,15 +399,17 @@ export function UserAdminPanel() {
                   {resendingId === user.id ? "Sending…" : "Resend invite"}
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteUser(user.id, user.name)}
-                  className="text-red-700"
-                >
-                  Remove
-                </Button>
+                {user.role !== "SUPER_ADMIN" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteUser(user.id, user.name)}
+                    className="text-red-700"
+                  >
+                    Remove
+                  </Button>
+                )}
               </div>
             </li>
           ))}

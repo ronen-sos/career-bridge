@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { signOut } from "@/lib/auth";
 import { requireAuth } from "@/lib/session";
+import { isAdminRole, isSuperAdmin, orgScope } from "@/lib/roles";
 import { db } from "@/lib/db";
 import { findParticipantCurrentGoal } from "@/lib/goals/access";
 import { computeGoalProgress, formatWeekRange, isDateInWeek, toDateInputValue } from "@/lib/goals/progress";
@@ -31,18 +32,23 @@ import { Button } from "@/components/ui/Button";
 export default async function DashboardPage() {
   const session = await requireAuth();
 
-  if (session.user.role === "ADMIN") {
+  if (isAdminRole(session.user.role)) {
+    const scope = orgScope(session.user);
     const participantCount = await db.user.count({
-      where: { role: "PARTICIPANT" },
+      where: { role: "PARTICIPANT", ...scope },
     });
-    const userCount = await db.user.count();
+    const userCount = await db.user.count({ where: { ...scope } });
     const pendingActivityReviews = await db.jobSearchActivity.count({
-      where: { managerReviewed: false },
+      where: { managerReviewed: false, user: { ...scope } },
     });
     const draftGoals = await db.weeklyGoal.count({
-      where: { status: { in: ["DRAFT", "PENDING_APPROVAL"] } },
+      where: { status: { in: ["DRAFT", "PENDING_APPROVAL"] }, user: { ...scope } },
     });
-    const pendingQuestionReviews = await countUnreadQuestionsAll();
+    const pendingQuestionReviews = await countUnreadQuestionsAll(
+      isSuperAdmin(session.user.role)
+        ? undefined
+        : { organizationId: session.user.organizationId ?? undefined },
+    );
 
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">
@@ -61,6 +67,11 @@ export default async function DashboardPage() {
               <StatBox label="Activities to review" value={pendingActivityReviews} />
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              {isSuperAdmin(session.user.role) && (
+                <Link href="/super-admin" className="block sm:flex-1">
+                  <Button className="w-full">Organizations</Button>
+                </Link>
+              )}
               <Link href="/admin" className="block sm:flex-1">
                 <Button className="w-full">Manage users</Button>
               </Link>
@@ -264,6 +275,8 @@ export default async function DashboardPage() {
         <div className="mt-6">
           <BridgeProgressCard
             pace={pace}
+            weekStart={toDateInputValue(goal.weekStart)}
+            weekEnd={toDateInputValue(goal.weekEnd)}
             weekRange={formatWeekRange(goal.weekStart, goal.weekEnd)}
             goalId={goal.id}
           />
@@ -380,7 +393,7 @@ function Header({ name, subtitle }: { name: string; subtitle: string }) {
   return (
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm text-emerald-800">Career Bridge</p>
+        <p className="text-sm text-emerald-800">Career Path</p>
         <h1 className="text-2xl font-bold text-stone-900">Hello, {name.split(" ")[0]}</h1>
         <p className="text-sm text-stone-600">{subtitle}</p>
       </div>

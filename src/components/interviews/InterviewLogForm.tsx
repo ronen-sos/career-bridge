@@ -140,7 +140,7 @@ export function InterviewLogForm() {
       <CardTitle>Log interview</CardTitle>
       <CardDescription>
         Link this interview to a job you applied for so we can track which
-        employers follow through. If you didn&apos;t apply through Career Bridge,
+        employers follow through. If you didn&apos;t apply through Career Path,
         you can still log the interview without counting it as an application.
       </CardDescription>
 

@@ -267,6 +267,20 @@ export const resendInviteSchema = z.object({
   personalNote: z.string().max(500, "Keep your note under 500 characters").optional(),
 });
 
+export const organizationSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Organization name is required")
+    .max(120, "Keep the name under 120 characters"),
+});
+
+export const createOrgAdminSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+  name: z.string().min(1, "Name is required"),
+  sendInvite: z.boolean().optional(),
+  personalNote: z.string().max(500, "Keep your note under 500 characters").optional(),
+});
+
 export const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   role: z.enum(["PARTICIPANT", "MANAGER", "ADMIN"]).optional(),

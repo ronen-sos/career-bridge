@@ -11,6 +11,7 @@ enum Role {
   PARTICIPANT
   MANAGER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum ActivityType {
@@ -36,6 +37,16 @@ enum InterviewApplicationLink {
   RETROACTIVE_APPLICATION
 }
 
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  logoData     Bytes?
+  logoMimeType String?
+  users        User[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
@@ -43,6 +54,8 @@ model User {
   name            String
   image           String?
   role            Role              @default(PARTICIPANT)
+  organizationId  String?
+  organization    Organization?     @relation(fields: [organizationId], references: [id])
   managerId       String?
   manager         User?             @relation("ManagerParticipants", fields: [managerId], references: [id])
   participants    User[]            @relation("ManagerParticipants")
@@ -62,6 +75,8 @@ model User {
   invitedAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  @@index([organizationId, role])
 }
 
 model Profile {

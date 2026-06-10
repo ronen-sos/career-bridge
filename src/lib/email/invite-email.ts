@@ -1,6 +1,6 @@
 import { getAppUrl } from "@/lib/email/client";
 
-type Role = "PARTICIPANT" | "MANAGER" | "ADMIN";
+type Role = "PARTICIPANT" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
 
 type InviteEmailInput = {
   recipientName: string;
@@ -14,6 +14,7 @@ const ROLE_LABELS: Record<Role, string> = {
   PARTICIPANT: "Participant",
   MANAGER: "Program Manager",
   ADMIN: "Administrator",
+  SUPER_ADMIN: "Administrator",
 };
 
 function roleBenefits(role: Role): string[] {
@@ -37,7 +38,7 @@ function roleBenefits(role: Role): string[] {
   }
 
   return [
-    "Manage who can access Career Bridge and invite new participants",
+    "Manage who can access Career Path and invite new participants",
     "Oversee program activity and support your team of managers",
     "Keep the program organized as Bridge to Thrive grows",
   ];
@@ -57,16 +58,16 @@ export function buildInviteEmail(input: InviteEmailInput) {
   const benefits = roleBenefits(input.role);
   const personalNote = input.personalNote?.trim();
 
-  const subject = `You're invited to Career Bridge — Bridge to Thrive`;
+  const subject = `You're invited to Career Path — Bridge to Thrive`;
 
   const textBenefits = benefits.map((b) => `• ${b}`).join("\n");
 
   const text = [
     `Hi ${input.recipientName},`,
     "",
-    `${input.inviterName} has invited you to join Career Bridge, a program of Bridge to Thrive.`,
+    `${input.inviterName} has invited you to join Career Path, a program of Bridge to Thrive.`,
     "",
-    "Career Bridge is a mobile-friendly app that supports your job search journey with accountability, career resources, and connection to your program team — especially for men in recovery building toward meaningful careers in the St. Paul area.",
+    "Career Path is a mobile-friendly app that supports your job search journey with accountability, career resources, and connection to your program team — especially for men in recovery building toward meaningful careers.",
     "",
     personalNote ? `A note from ${input.inviterName}:\n"${personalNote}"\n` : "",
     `You've been invited as a ${roleLabel}. Here's what you can do:`,
@@ -79,7 +80,7 @@ export function buildInviteEmail(input: InviteEmailInput) {
     "",
     "We're glad you're here. If you have questions, reach out to your program manager.",
     "",
-    "— Bridge to Thrive / Career Bridge",
+    "— Bridge to Thrive / Career Path",
   ]
     .filter(Boolean)
     .join("\n");
@@ -103,27 +104,27 @@ export function buildInviteEmail(input: InviteEmailInput) {
           <tr>
             <td style="background:linear-gradient(135deg,#065f46,#064e3b);padding:28px 32px;color:#ffffff;">
               <p style="margin:0 0 8px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#a7f3d0;">Bridge to Thrive</p>
-              <h1 style="margin:0;font-size:28px;font-weight:700;line-height:1.2;">Welcome to Career Bridge</h1>
+              <h1 style="margin:0;font-size:28px;font-weight:700;line-height:1.2;">Welcome to Career Path</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;line-height:1.6;">
               <p style="margin:0 0 16px;">Hi ${escapeHtml(input.recipientName)},</p>
-              <p style="margin:0 0 16px;"><strong>${escapeHtml(input.inviterName)}</strong> has invited you to join <strong>Career Bridge</strong> — a program of Bridge to Thrive.</p>
-              <p style="margin:0 0 16px;">Career Bridge is a mobile-friendly app that supports your job search with accountability, career resources, and connection to your program team. It's designed especially for men in recovery who are building toward meaningful careers in the St. Paul area.</p>
+              <p style="margin:0 0 16px;"><strong>${escapeHtml(input.inviterName)}</strong> has invited you to join <strong>Career Path</strong> — a program of Bridge to Thrive.</p>
+              <p style="margin:0 0 16px;">Career Path is a mobile-friendly app that supports your job search with accountability, career resources, and connection to your program team. It's designed especially for men in recovery who are building toward meaningful careers.</p>
               ${personalNoteHtml}
               <p style="margin:0 0 12px;font-weight:600;">You've been invited as a <span style="color:#047857;">${escapeHtml(roleLabel)}</span>. Here's what awaits you:</p>
               <ul style="margin:0 0 24px;padding-left:20px;color:#44403c;">${benefitsHtml}</ul>
               <p style="margin:0 0 16px;">When you're ready, sign in with Google using <strong>${escapeHtml(input.recipientEmail)}</strong> — the same address this invitation was sent to.</p>
               <p style="margin:0 0 28px;text-align:center;">
-                <a href="${loginUrl}" style="display:inline-block;background:#047857;color:#ffffff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px;font-size:16px;">Sign in to Career Bridge</a>
+                <a href="${loginUrl}" style="display:inline-block;background:#047857;color:#ffffff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px;font-size:16px;">Sign in to Career Path</a>
               </p>
               <p style="margin:0;font-size:14px;color:#78716c;">We're glad you're here. If you have questions, reach out to your program manager.</p>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 32px;background:#f5f5f4;font-size:12px;color:#78716c;text-align:center;font-family:system-ui,sans-serif;">
-              Bridge to Thrive · Career Bridge · <a href="https://bridgetothrive.org" style="color:#047857;">bridgetothrive.org</a>
+              Bridge to Thrive · Career Path · <a href="https://bridgetothrive.org" style="color:#047857;">bridgetothrive.org</a>
             </td>
           </tr>
         </table>

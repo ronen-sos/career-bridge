@@ -13,7 +13,24 @@ export async function canManageParticipantGoals(
   actorRole: string,
   participantId: string,
 ): Promise<boolean> {
-  if (actorRole === "ADMIN") return true;
+  if (actorRole === "SUPER_ADMIN") return true;
+
+  if (actorRole === "ADMIN") {
+    const [actor, participant] = await Promise.all([
+      db.user.findUnique({
+        where: { id: actorId },
+        select: { organizationId: true },
+      }),
+      db.user.findUnique({
+        where: { id: participantId },
+        select: { organizationId: true },
+      }),
+    ]);
+    return (
+      !!actor?.organizationId &&
+      actor.organizationId === participant?.organizationId
+    );
+  }
 
   if (actorRole !== "MANAGER") return false;
 
