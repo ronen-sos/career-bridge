@@ -1,10 +1,12 @@
 import Link from "next/link";
 
 import { requireRole } from "@/lib/session";
+import { getUserAdminData } from "@/lib/users/list.server";
 import { UserAdminPanel } from "@/components/UserAdminPanel";
 
 export default async function AdminPage() {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN"]);
+  const initialData = await getUserAdminData(session.user);
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -24,7 +26,7 @@ export default async function AdminPage() {
       </div>
 
       <div className="mt-6">
-        <UserAdminPanel />
+        <UserAdminPanel initialData={initialData} />
       </div>
     </div>
   );

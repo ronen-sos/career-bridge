@@ -40,17 +40,38 @@ function formatTimestamp(value: string | null): string | null {
   }).format(new Date(value));
 }
 
-export function UserAdminPanel() {
+export type UserAdminInitialData = {
+  users: User[];
+  organizations: Array<{ id: string; name: string }>;
+  viewerIsSuperAdmin: boolean;
+  viewerOrganizationId: string | null;
+  emailConfigured: boolean;
+  emailProvider: "resend" | "gmail" | null;
+};
+
+export function UserAdminPanel({
+  initialData,
+}: {
+  initialData?: UserAdminInitialData;
+}) {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(initialData?.users ?? []);
   const [organizations, setOrganizations] = useState<
     Array<{ id: string; name: string }>
-  >([]);
-  const [isSuperAdminViewer, setIsSuperAdminViewer] = useState(false);
-  const [inviteOrgId, setInviteOrgId] = useState<string>("");
-  const [emailConfigured, setEmailConfigured] = useState(true);
-  const [emailProvider, setEmailProvider] = useState<"resend" | "gmail" | null>(null);
-  const [loading, setLoading] = useState(true);
+  >(initialData?.organizations ?? []);
+  const [isSuperAdminViewer, setIsSuperAdminViewer] = useState(
+    initialData?.viewerIsSuperAdmin ?? false,
+  );
+  const [inviteOrgId, setInviteOrgId] = useState<string>(
+    initialData?.viewerOrganizationId ?? "",
+  );
+  const [emailConfigured, setEmailConfigured] = useState(
+    initialData?.emailConfigured ?? true,
+  );
+  const [emailProvider, setEmailProvider] = useState<"resend" | "gmail" | null>(
+    initialData?.emailProvider ?? null,
+  );
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -96,7 +117,9 @@ export function UserAdminPanel() {
   }
 
   useEffect(() => {
-    loadUsers();
+    // Server-rendered data arrives via props; only fetch when it's absent.
+    if (!initialData) loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleInvite(e: React.FormEvent<HTMLFormElement>) {

@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getEmailProvider, isEmailConfigured } from "@/lib/email/client";
-import { isAdminRole, isSuperAdmin, orgScope } from "@/lib/roles";
+import { isEmailConfigured } from "@/lib/email/client";
+import { isAdminRole, isSuperAdmin } from "@/lib/roles";
 import { createInvitedUser } from "@/lib/users/invite";
+import { getUserAdminData } from "@/lib/users/list.server";
 import { createUserSchema } from "@/lib/validations";
 
 async function requireAdmin() {
@@ -21,33 +22,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const viewerIsSuperAdmin = isSuperAdmin(session.user.role);
-
-  const [users, organizations] = await Promise.all([
-    db.user.findMany({
-      where: orgScope(session.user),
-      orderBy: [{ role: "asc" }, { name: "asc" }],
-      include: {
-        manager: { select: { id: true, name: true, email: true } },
-        organization: { select: { id: true, name: true } },
-      },
-    }),
-    viewerIsSuperAdmin
-      ? db.organization.findMany({
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
-        })
-      : Promise.resolve([]),
-  ]);
-
-  return NextResponse.json({
-    users,
-    emailConfigured: isEmailConfigured(),
-    emailProvider: getEmailProvider(),
-    viewerIsSuperAdmin,
-    viewerOrganizationId: session.user.organizationId,
-    organizations,
-  });
+  return NextResponse.json(await getUserAdminData(session.user));
 }
 
 export async function POST(request: Request) {
