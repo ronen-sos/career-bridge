@@ -25,9 +25,9 @@ const PARTICIPANT_FEATURES: Feature[] = [
   },
   {
     icon: Footprints,
-    title: "Cross the bridge each week",
+    title: "Follow your path each week",
     description:
-      "Weekly goals show your progress as steps across a bridge — small wins add up.",
+      "Weekly goals show your progress as steps along your path — small wins add up.",
   },
   {
     icon: FileText,

@@ -76,6 +76,17 @@ function Walker({ x, isWalking }: { x: number; isWalking: boolean }) {
   );
 }
 
+function Tree({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x}, ${y}) scale(${scale})`}>
+      <rect x="-2.5" y="-4" width="5" height="16" rx="1.5" fill="#92400e" />
+      <circle cx="0" cy="-12" r="11" fill="#059669" />
+      <circle cx="-8" cy="-6" r="8" fill="#10b981" />
+      <circle cx="8" cy="-7" r="8" fill="#10b981" />
+    </g>
+  );
+}
+
 export function BridgeScene({
   overallProgress,
   expectedFraction,
@@ -103,7 +114,7 @@ export function BridgeScene({
   return (
     <div className="relative">
       <svg
-        viewBox="0 0 400 180"
+        viewBox="0 30 400 122"
         className="w-full"
         role="img"
         aria-label={
@@ -112,64 +123,83 @@ export function BridgeScene({
         }
       >
         <defs>
-          <linearGradient id={`bridgeSky-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`pathSky-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={sky.skyFrom} />
             <stop offset="100%" stopColor={sky.skyTo} />
           </linearGradient>
-          <linearGradient id={`bridgeDeck-${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#78716c" />
-            <stop offset="50%" stopColor="#a8a29e" />
-            <stop offset="100%" stopColor="#78716c" />
+          <linearGradient id={`pathGrass-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#86efac" />
+            <stop offset="100%" stopColor="#34d399" />
+          </linearGradient>
+          <linearGradient id={`pathTrail-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#d6bf94" />
+            <stop offset="50%" stopColor="#e7d3ac" />
+            <stop offset="100%" stopColor="#d6bf94" />
           </linearGradient>
         </defs>
 
-        <rect width="400" height="180" fill={`url(#bridgeSky-${uid})`} />
+        <rect width="400" height="180" fill={`url(#pathSky-${uid})`} />
 
         {sky.showSun && (
-          <circle cx="340" cy="36" r="22" fill="#fde047" opacity="0.9" />
+          <circle cx="340" cy="56" r="20" fill="#fde047" opacity="0.9" />
         )}
 
         {sky.showClouds && (
           <>
-            <ellipse cx="100" cy="44" rx="32" ry="16" fill="#fff" opacity="0.85" />
-            <ellipse cx="130" cy="40" rx="24" ry="12" fill="#fff" opacity="0.7" />
+            <ellipse cx="100" cy="58" rx="32" ry="14" fill="#fff" opacity="0.85" />
+            <ellipse cx="130" cy="53" rx="24" ry="11" fill="#fff" opacity="0.7" />
           </>
         )}
 
-        <rect x="0" y="118" width="48" height="62" fill="#57534e" rx="4" />
-        <rect x="352" y="118" width="48" height="62" fill="#57534e" rx="4" />
-        <rect
-          x="44"
-          y="128"
-          width="312"
-          height="10"
-          fill={`url(#bridgeDeck-${uid})`}
-          rx="2"
+        {/* Distant rolling hills */}
+        <path
+          d="M0,126 Q 90,88 190,122 T 400,118 L400,150 L0,150 Z"
+          fill="#bbf7d0"
+          opacity="0.85"
+        />
+        <path
+          d="M140,126 Q 260,94 400,122 L400,150 L140,150 Z"
+          fill="#a7f3d0"
+          opacity="0.8"
         />
 
-        {Array.from({ length: 9 }).map((_, i) => (
-          <rect
-            key={i}
-            x={56 + i * 34}
-            y="124"
-            width="18"
-            height="4"
-            fill="#44403c"
-            rx="1"
-          />
-        ))}
+        {/* Grass ground */}
+        <path
+          d="M0,123 C 60,118 130,122 200,120 C 280,118 340,122 400,119 L400,180 L0,180 Z"
+          fill={`url(#pathGrass-${uid})`}
+        />
 
+        {/* Winding trail */}
+        <path
+          d="M44,127 C 120,122 230,132 356,125 L356,138 C 230,146 120,135 44,141 Z"
+          fill={`url(#pathTrail-${uid})`}
+          stroke="#b69b6e"
+          strokeWidth="1"
+        />
         <line
           x1={BRIDGE_START}
-          y1="110"
+          y1="133"
           x2={BRIDGE_END}
-          y2="110"
-          stroke="#a8a29e"
+          y2="133"
+          stroke="#c2a87d"
           strokeWidth="2"
-          strokeDasharray="4 6"
-          opacity="0.7"
+          strokeDasharray="6 8"
+          opacity="0.8"
         />
+        <ellipse cx="110" cy="136" rx="3" ry="1.4" fill="#c9b083" />
+        <ellipse cx="205" cy="130" rx="2.5" ry="1.2" fill="#c9b083" />
+        <ellipse cx="290" cy="135" rx="3" ry="1.4" fill="#c9b083" />
 
+        {/* Trees and flowers along the way */}
+        <Tree x={22} y={112} />
+        <Tree x={384} y={110} scale={1.1} />
+        <circle cx="86" cy="146" r="2.2" fill="#f472b6" />
+        <circle cx="92" cy="149" r="1.8" fill="#fbbf24" />
+        <circle cx="248" cy="147" r="2.2" fill="#f472b6" />
+        <circle cx="318" cy="145" r="1.8" fill="#fbbf24" />
+        <circle cx="170" cy="148" r="1.8" fill="#f472b6" />
+
+        {/* Expected-progress marker */}
         <g transform={`translate(${markerX}, 108)`}>
           <line x1="0" y1="0" x2="0" y2="22" stroke="#6366f1" strokeWidth="2" />
           <polygon points="0,-4 10,4 0,10 -10,4" fill="#6366f1" />
@@ -187,34 +217,49 @@ export function BridgeScene({
           )}
         </g>
 
-        <g transform={`translate(${BRIDGE_END + 8}, 108)`}>
-          <circle cx="0" cy="0" r="14" fill={weekComplete ? "#fbbf24" : "#d6d3d1"} />
+        {/* Goal flag at the end of the path */}
+        <g transform={`translate(${BRIDGE_END + 12}, 0)`}>
+          <line x1="0" y1="98" x2="0" y2="130" stroke="#78716c" strokeWidth="2.5" />
           {weekComplete ? (
-            <text x="0" y="5" textAnchor="middle" fontSize="14" aria-hidden>
-              🏆
-            </text>
+            <>
+              <circle cx="0" cy="92" r="13" fill="#fbbf24" />
+              <text x="0" y="97" textAnchor="middle" fontSize="13" aria-hidden>
+                🏆
+              </text>
+            </>
           ) : (
-            <text x="0" y="4" textAnchor="middle" fontSize="10" fill="#78716c" fontWeight="700">
-              GOAL
-            </text>
+            <>
+              <polygon points="0,96 22,103 0,110" fill="#f59e0b" />
+              <text
+                x="4"
+                y="124"
+                textAnchor="middle"
+                fontSize="8"
+                fill="#78716c"
+                fontWeight="700"
+              >
+                GOAL
+              </text>
+            </>
           )}
         </g>
 
         <Walker x={walkerX} isWalking={isWalking} />
 
+        {/* Distance already traveled */}
         <rect
           x={BRIDGE_START}
-          y="142"
+          y="128"
           width={overallProgress * BRIDGE_WIDTH}
-          height="4"
+          height="6"
           fill="#059669"
-          rx="2"
-          opacity="0.5"
+          rx="3"
+          opacity="0.45"
         />
       </svg>
 
       <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-stone-700 shadow-sm backdrop-blur">
-        {overallPercent}% crossed
+        {overallPercent}% traveled
       </div>
       <div className="absolute bottom-3 right-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-indigo-700 shadow-sm backdrop-blur">
         {expectedPercent}% expected

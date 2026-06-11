@@ -38,14 +38,14 @@ const STATUS_CONFIG: Record<
   }
 > = {
   complete: {
-    title: "You made it across!",
+    title: "You reached the end of the path!",
     message: "Every weekly target met — incredible work this week.",
     banner: "bg-emerald-600 text-white",
     icon: Trophy,
   },
   ahead: {
     title: "Ahead of schedule!",
-    message: "You're crossing faster than expected — amazing momentum.",
+    message: "You're moving faster than expected — amazing momentum.",
     banner: "bg-amber-500 text-white",
     icon: Sparkles,
   },
@@ -120,7 +120,7 @@ export function BridgeProgressCard({
       <div id="participant-bridge" className="scroll-mt-0">
       <Card className="overflow-hidden p-0">
         <div className="p-4 pb-0">
-          <CardTitle>Your bridge to success</CardTitle>
+          <CardTitle>Your path to success</CardTitle>
           <CardDescription>
             {weekRange} · Day {pace.daysElapsed} of {pace.daysTotal} ·{" "}
             {pace.overallPercent}% overall (all goal types)
@@ -136,7 +136,7 @@ export function BridgeProgressCard({
           </div>
         )}
 
-        <div className="mt-3">
+        <div className="mx-auto mt-3 w-full max-w-2xl">
           <BridgeScene
             overallProgress={displayProgress}
             expectedFraction={pace.expectedFraction}
