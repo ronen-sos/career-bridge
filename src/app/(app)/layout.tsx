@@ -13,12 +13,11 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await requireAuth();
-  const logBadgeCount =
-    session.user.role === "PARTICIPANT"
-      ? await countUnreadRepliesForParticipant(session.user.id)
-      : 0;
 
-  const [organization, welcomeUser] = await Promise.all([
+  const [logBadgeCount, organization, welcomeUser] = await Promise.all([
+    session.user.role === "PARTICIPANT"
+      ? countUnreadRepliesForParticipant(session.user.id)
+      : 0,
     session.user.organizationId
       ? db.organization.findUnique({
           where: { id: session.user.organizationId },

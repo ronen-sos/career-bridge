@@ -34,21 +34,30 @@ export default async function DashboardPage() {
 
   if (isAdminRole(session.user.role)) {
     const scope = orgScope(session.user);
-    const participantCount = await db.user.count({
-      where: { role: "PARTICIPANT", ...scope },
-    });
-    const userCount = await db.user.count({ where: { ...scope } });
-    const pendingActivityReviews = await db.jobSearchActivity.count({
-      where: { managerReviewed: false, user: { ...scope } },
-    });
-    const draftGoals = await db.weeklyGoal.count({
-      where: { status: { in: ["DRAFT", "PENDING_APPROVAL"] }, user: { ...scope } },
-    });
-    const pendingQuestionReviews = await countUnreadQuestionsAll(
-      isSuperAdmin(session.user.role)
-        ? undefined
-        : { organizationId: session.user.organizationId ?? undefined },
-    );
+    const [
+      participantCount,
+      userCount,
+      pendingActivityReviews,
+      draftGoals,
+      pendingQuestionReviews,
+    ] = await Promise.all([
+      db.user.count({ where: { role: "PARTICIPANT", ...scope } }),
+      db.user.count({ where: { ...scope } }),
+      db.jobSearchActivity.count({
+        where: { managerReviewed: false, user: { ...scope } },
+      }),
+      db.weeklyGoal.count({
+        where: {
+          status: { in: ["DRAFT", "PENDING_APPROVAL"] },
+          user: { ...scope },
+        },
+      }),
+      countUnreadQuestionsAll(
+        isSuperAdmin(session.user.role)
+          ? undefined
+          : { organizationId: session.user.organizationId ?? undefined },
+      ),
+    ]);
 
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">
@@ -93,24 +102,29 @@ export default async function DashboardPage() {
   }
 
   if (session.user.role === "MANAGER") {
-    const participantCount = await db.user.count({
-      where: { role: "PARTICIPANT", managerId: session.user.id },
-    });
-    const draftGoals = await db.weeklyGoal.count({
-      where: {
-        status: { in: ["DRAFT", "PENDING_APPROVAL"] },
-        user: { managerId: session.user.id },
-      },
-    });
-    const pendingQuestionReviews = await countUnreadQuestionsForManager(
-      session.user.id,
-    );
-    const pendingActivityReviews = await db.jobSearchActivity.count({
-      where: {
-        managerReviewed: false,
-        user: { managerId: session.user.id },
-      },
-    });
+    const [
+      participantCount,
+      draftGoals,
+      pendingQuestionReviews,
+      pendingActivityReviews,
+    ] = await Promise.all([
+      db.user.count({
+        where: { role: "PARTICIPANT", managerId: session.user.id },
+      }),
+      db.weeklyGoal.count({
+        where: {
+          status: { in: ["DRAFT", "PENDING_APPROVAL"] },
+          user: { managerId: session.user.id },
+        },
+      }),
+      countUnreadQuestionsForManager(session.user.id),
+      db.jobSearchActivity.count({
+        where: {
+          managerReviewed: false,
+          user: { managerId: session.user.id },
+        },
+      }),
+    ]);
 
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">
@@ -152,31 +166,24 @@ export default async function DashboardPage() {
     participantUser?.manager?.name ??
     (participantUser?.managerId ? "your program manager" : null);
 
-  const recordedApplications = goal
-    ? await countApplicationsInPeriod(
-        session.user.id,
-        goal.weekStart,
-        goal.weekEnd,
-      )
-    : 0;
-
-  const recordedInterviews = goal
-    ? await countInterviewsInPeriod(
-        session.user.id,
-        goal.weekStart,
-        goal.weekEnd,
-      )
-    : 0;
-
-  const recentApplications = await db.jobApplication.findMany({
-    where: { userId: session.user.id },
-    orderBy: [{ appliedAt: "desc" }, { createdAt: "desc" }],
-    take: 5,
-    include: {
-      company: { select: { id: true, name: true } },
-      position: { select: { id: true, title: true } },
-    },
-  });
+  const [recordedApplications, recordedInterviews, recentApplications] =
+    await Promise.all([
+      goal
+        ? countApplicationsInPeriod(session.user.id, goal.weekStart, goal.weekEnd)
+        : 0,
+      goal
+        ? countInterviewsInPeriod(session.user.id, goal.weekStart, goal.weekEnd)
+        : 0,
+      db.jobApplication.findMany({
+        where: { userId: session.user.id },
+        orderBy: [{ appliedAt: "desc" }, { createdAt: "desc" }],
+        take: 5,
+        include: {
+          company: { select: { id: true, name: true } },
+          position: { select: { id: true, title: true } },
+        },
+      }),
+    ]);
 
   const stats = goal
     ? computeGoalProgress(

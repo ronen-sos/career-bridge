@@ -1,10 +1,15 @@
+import { cache } from "react";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 import { isSuperAdmin } from "@/lib/roles";
 
+// Layout and page both check auth during the same render; React's cache()
+// dedupes that into a single session resolution per request.
+const getSession = cache(() => auth());
+
 export async function requireAuth() {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) {
     redirect("/login");
   }

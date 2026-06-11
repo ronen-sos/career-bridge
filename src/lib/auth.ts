@@ -4,6 +4,34 @@ import Google from "next-auth/providers/google";
 import { authConfig } from "@/lib/auth.config";
 import { db } from "@/lib/db";
 import { getImpersonationTargetId } from "@/lib/impersonation";
+import type { User } from "@/generated/prisma/client";
+
+// The jwt/session callbacks run on every auth() call (layout, page, and each
+// API request). Without caching, each of those is a database round trip,
+// which dominates page load time when the DB is remote. A short TTL keeps
+// role/org changes propagating within a minute without a re-login.
+const USER_CACHE_TTL_MS = 60_000;
+const userCache = new Map<string, { user: User | null; expiresAt: number }>();
+
+async function getCachedUser(
+  key: "email" | "id",
+  value: string,
+  { fresh = false }: { fresh?: boolean } = {},
+): Promise<User | null> {
+  const cacheKey = `${key}:${value}`;
+  const cached = userCache.get(cacheKey);
+  if (!fresh && cached && cached.expiresAt > Date.now()) {
+    return cached.user;
+  }
+
+  const user = await db.user.findUnique({
+    where: key === "email" ? { email: value } : { id: value },
+  });
+
+  if (userCache.size > 1000) userCache.clear();
+  userCache.set(cacheKey, { user, expiresAt: Date.now() + USER_CACHE_TTL_MS });
+  return user;
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -59,7 +87,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!email) return token;
 
       try {
-        const dbUser = await db.user.findUnique({ where: { email } });
+        // Fresh sign-ins bypass the cache so new roles/orgs apply immediately.
+        const dbUser = await getCachedUser("email", email, {
+          fresh: Boolean(user || account),
+        });
 
         if (dbUser) {
           token.id = dbUser.id;
@@ -94,9 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const targetId = await getImpersonationTargetId();
           if (targetId && targetId !== token.id) {
             try {
-              const target = await db.user.findUnique({
-                where: { id: targetId },
-              });
+              const target = await getCachedUser("id", targetId);
               if (target && target.role !== "SUPER_ADMIN") {
                 session.user.id = target.id;
                 session.user.role = target.role;
