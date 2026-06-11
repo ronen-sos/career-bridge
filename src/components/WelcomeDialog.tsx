@@ -71,16 +71,26 @@ const TEAM_FEATURES: Feature[] = [
 ];
 
 export function WelcomeDialog({
+  userId,
   name,
   role,
   persistDismissal,
 }: {
+  userId: string;
   name: string;
   role: string;
   persistDismissal: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [open, setOpen] = useState(true);
+  // When impersonating we never write welcomeSeenAt to the database, so
+  // remember the dismissal per browser session or the modal would reopen on
+  // every page load and block all clicks behind it.
+  const storageKey = `career-path-welcome-dismissed-${userId}`;
+  const [open, setOpen] = useState(
+    () =>
+      typeof sessionStorage === "undefined" ||
+      sessionStorage.getItem(storageKey) !== "1",
+  );
   const [confetti, setConfetti] = useState(true);
 
   const features =
@@ -96,6 +106,11 @@ export function WelcomeDialog({
 
   function dismiss() {
     setOpen(false);
+    try {
+      sessionStorage.setItem(storageKey, "1");
+    } catch {
+      // Storage unavailable (private mode); the dialog just reopens next load.
+    }
     if (persistDismissal) {
       void fetch("/api/welcome", { method: "POST" });
     }

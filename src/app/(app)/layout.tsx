@@ -62,6 +62,7 @@ export default async function AppLayout({
         </div>
         {showWelcome && (
           <WelcomeDialog
+            userId={session.user.id}
             name={session.user.name ?? "there"}
             role={session.user.role}
             persistDismissal={!session.user.impersonatedBy}

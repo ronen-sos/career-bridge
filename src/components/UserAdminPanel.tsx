@@ -40,6 +40,17 @@ function formatTimestamp(value: string | null): string | null {
   }).format(new Date(value));
 }
 
+/**
+ * Server renders in its own timezone, the visitor's browser in theirs.
+ * Suppress the hydration mismatch, then re-render once after mount so the
+ * visitor always sees their local time.
+ */
+function LocalTimestamp({ value }: { value: string }) {
+  const [, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return <span suppressHydrationWarning>{formatTimestamp(value)}</span>;
+}
+
 export type UserAdminInitialData = {
   users: User[];
   organizations: Array<{ id: string; name: string }>;
@@ -438,14 +449,14 @@ export function UserAdminPanel({
                   )}
                   {user.invitedAt ? (
                     <p className="mt-1 text-xs text-emerald-700">
-                      Invited {formatTimestamp(user.invitedAt)}
+                      Invited <LocalTimestamp value={user.invitedAt} />
                     </p>
                   ) : (
                     <p className="mt-1 text-xs text-stone-500">Not invited yet</p>
                   )}
                   {user.lastLoginAt ? (
                     <p className="mt-0.5 text-xs text-stone-500">
-                      Last sign-in: {formatTimestamp(user.lastLoginAt)}
+                      Last sign-in: <LocalTimestamp value={user.lastLoginAt} />
                     </p>
                   ) : (
                     <p className="mt-0.5 text-xs text-stone-400">
