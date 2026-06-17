@@ -1,9 +1,19 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { useEffect } from "react";
 
 import { ProgressBridgeProvider } from "@/components/goals/ProgressBridgeProvider";
 import { UnreadRepliesProvider } from "@/lib/questions/unread-replies.client";
+
+function CloseOrphanedDialogs() {
+  useEffect(() => {
+    document.querySelectorAll("dialog[open]").forEach((node) => {
+      if (node instanceof HTMLDialogElement) node.close();
+    });
+  }, []);
+  return null;
+}
 
 export function Providers({
   children,
@@ -24,5 +34,5 @@ export function Providers({
     );
   }
 
-  return <SessionProvider session={session}>{content}</SessionProvider>;
+  return <SessionProvider session={session}><CloseOrphanedDialogs />{content}</SessionProvider>;
 }

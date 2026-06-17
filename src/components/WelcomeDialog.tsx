@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -81,13 +81,11 @@ export function WelcomeDialog({
   role: string;
 }) {
   const router = useRouter();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const storageKey = `career-path-welcome-dismissed-${userId}`;
-  // Render nothing on the server and on the first client pass so sessionStorage
-  // checks cannot cause hydration mismatches or flash a blocking modal.
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
 
   const features =
     role === "PARTICIPANT" ? PARTICIPANT_FEATURES : TEAM_FEATURES;
@@ -107,74 +105,95 @@ export function WelcomeDialog({
   }, [storageKey]);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   async function dismiss() {
+    if (dismissing) return;
+    setDismissing(true);
     setOpen(false);
     setConfetti(false);
     try {
       sessionStorage.setItem(storageKey, "1");
     } catch {
-      // Storage unavailable (private mode); the dialog just reopens next load.
+      // Storage unavailable (private mode); the dialog reopens next load.
     }
-    await fetch("/api/welcome", { method: "POST" });
-    router.refresh();
+    try {
+      await fetch("/api/welcome", { method: "POST" });
+    } finally {
+      router.refresh();
+      setDismissing(false);
+    }
   }
 
   if (!mounted || !open) return null;
 
   return (
     <>
-      <dialog
-        ref={dialogRef}
-        onClose={dismiss}
-        onCancel={dismiss}
-        className="m-auto w-[calc(100vw-2rem)] max-w-lg rounded-2xl p-0 shadow-2xl backdrop:bg-stone-950/50"
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcome-title"
       >
-        <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 px-6 py-6 text-white">
-          <div className="flex items-center gap-2">
-            <PartyPopper className="h-6 w-6 text-amber-300" aria-hidden />
-            <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
-              Welcome to Career Path
+        <button
+          type="button"
+          className="absolute inset-0 bg-stone-950/50"
+          aria-label="Dismiss welcome"
+          onClick={dismiss}
+        />
+        <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 px-6 py-6 text-white">
+            <div className="flex items-center gap-2">
+              <PartyPopper className="h-6 w-6 text-amber-300" aria-hidden />
+              <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
+                Welcome to Career Path
+              </p>
+            </div>
+            <h2 id="welcome-title" className="mt-2 text-2xl font-bold leading-tight">
+              Great to have you here, {firstName}!
+            </h2>
+            <p className="mt-1 text-sm text-emerald-100">
+              Here&apos;s what you can do in the app:
             </p>
           </div>
-          <h2 className="mt-2 text-2xl font-bold leading-tight">
-            Great to have you here, {firstName}!
-          </h2>
-          <p className="mt-1 text-sm text-emerald-100">
-            Here&apos;s what you can do in the app:
-          </p>
-        </div>
 
-        <div className="space-y-4 px-6 py-5">
-          {features.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-                <Icon className="h-4.5 w-4.5" aria-hidden />
+          <div className="space-y-4 px-6 py-5">
+            {features.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                  <Icon className="h-4.5 w-4.5" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900">{title}</p>
+                  <p className="text-sm text-stone-600">{description}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-stone-900">{title}</p>
-                <p className="text-sm text-stone-600">{description}</p>
-              </div>
-            </div>
-          ))}
+            ))}
 
-          <Button type="button" onClick={dismiss} className="w-full">
-            Let&apos;s get started
-          </Button>
+            <Button
+              type="button"
+              onClick={dismiss}
+              disabled={dismissing}
+              className="w-full"
+            >
+              Let&apos;s get started
+            </Button>
+          </div>
         </div>
+      </div>
 
-        {open && (
-          <ConfettiCelebration
-            active={confetti}
-            onComplete={() => setConfetti(false)}
-          />
-        )}
-      </dialog>
+      {confetti && (
+        <ConfettiCelebration
+          active={confetti}
+          onComplete={() => setConfetti(false)}
+        />
+      )}
     </>
   );
 }

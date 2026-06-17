@@ -27,7 +27,7 @@ import {
   listQuestionsForUser,
 } from "@/lib/questions/record.server";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 
 export default async function DashboardPage() {
   const session = await requireAuth();
@@ -77,23 +77,27 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               {isSuperAdmin(session.user.role) && (
-                <Link href="/super-admin" className="block sm:flex-1">
-                  <Button className="w-full">Organizations</Button>
-                </Link>
+                <ButtonLink href="/super-admin" className="w-full sm:flex-1">
+                  Organizations
+                </ButtonLink>
               )}
-              <Link href="/admin" className="block sm:flex-1">
-                <Button className="w-full">Manage users</Button>
-              </Link>
-              <Link href="/admin/employers" className="block sm:flex-1">
-                <Button variant="secondary" className="w-full">
-                  Employer activity
-                </Button>
-              </Link>
-              <Link href="/manager" className="block sm:flex-1">
-                <Button variant="secondary" className="w-full">
-                  View team progress
-                </Button>
-              </Link>
+              <ButtonLink href="/admin" className="w-full sm:flex-1">
+                Manage users
+              </ButtonLink>
+              <ButtonLink
+                href="/admin/employers"
+                variant="secondary"
+                className="w-full sm:flex-1"
+              >
+                Employer activity
+              </ButtonLink>
+              <ButtonLink
+                href="/manager"
+                variant="secondary"
+                className="w-full sm:flex-1"
+              >
+                View team progress
+              </ButtonLink>
             </div>
           </Card>
         </div>
@@ -141,9 +145,9 @@ export default async function DashboardPage() {
               <StatBox label="Questions to review" value={pendingQuestionReviews} />
               <StatBox label="Activities to review" value={pendingActivityReviews} />
             </div>
-            <Link href="/manager" className="mt-4 block md:max-w-xs">
-              <Button className="w-full">View team progress</Button>
-            </Link>
+            <ButtonLink href="/manager" className="mt-4 w-full md:max-w-xs">
+              View team progress
+            </ButtonLink>
           </Card>
         </div>
       </div>
