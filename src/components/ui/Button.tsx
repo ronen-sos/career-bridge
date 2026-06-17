@@ -1,9 +1,34 @@
+import Link from "next/link";
+
 import { cn } from "@/lib/cn";
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonStyleProps = {
   variant?: "primary" | "secondary" | "ghost";
   size?: "sm" | "md" | "lg";
+  className?: string;
 };
+
+export function buttonClassName({
+  variant = "primary",
+  size = "md",
+  className,
+}: ButtonStyleProps = {}) {
+  return cn(
+    "inline-flex items-center justify-center rounded-xl font-medium transition-colors disabled:opacity-50",
+    variant === "primary" &&
+      "bg-emerald-700 text-white hover:bg-emerald-800 active:bg-emerald-900",
+    variant === "secondary" &&
+      "border border-emerald-200 bg-white text-emerald-900 hover:bg-emerald-50",
+    variant === "ghost" && "text-emerald-800 hover:bg-emerald-50",
+    size === "sm" && "px-3 py-2 text-sm",
+    size === "md" && "px-4 py-3 text-base",
+    size === "lg" && "px-5 py-4 text-lg",
+    className,
+  );
+}
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  ButtonStyleProps;
 
 export function Button({
   className,
@@ -13,18 +38,24 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={cn(
-        "inline-flex items-center justify-center rounded-xl font-medium transition-colors disabled:opacity-50",
-        variant === "primary" &&
-          "bg-emerald-700 text-white hover:bg-emerald-800 active:bg-emerald-900",
-        variant === "secondary" &&
-          "border border-emerald-200 bg-white text-emerald-900 hover:bg-emerald-50",
-        variant === "ghost" && "text-emerald-800 hover:bg-emerald-50",
-        size === "sm" && "px-3 py-2 text-sm",
-        size === "md" && "px-4 py-3 text-base",
-        size === "lg" && "px-5 py-4 text-lg",
-        className,
-      )}
+      className={buttonClassName({ variant, size, className })}
+      {...props}
+    />
+  );
+}
+
+type ButtonLinkProps = React.ComponentProps<typeof Link> & ButtonStyleProps;
+
+/** Use instead of wrapping `<Button>` in `<Link>` — nested buttons break navigation. */
+export function ButtonLink({
+  className,
+  variant = "primary",
+  size = "md",
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <Link
+      className={buttonClassName({ variant, size, className })}
       {...props}
     />
   );

@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import {
   AskManagerDialog,
   type AskManagerConfig,
@@ -33,19 +32,26 @@ export function ParticipantDashboardActions({
   return (
     <>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Link href="/accountability#log-interview" className="sm:flex-1 sm:min-w-[140px]">
-          <Button className="w-full">Log interview</Button>
-        </Link>
-        <Link href="/accountability#log-application" className="sm:flex-1 sm:min-w-[140px]">
-          <Button variant="secondary" className="w-full">
-            Log application
-          </Button>
-        </Link>
-        <Link href="/profile?tab=resume" className="sm:flex-1 sm:min-w-[140px]">
-          <Button variant="secondary" className="w-full">
-            Build a resume
-          </Button>
-        </Link>
+        <ButtonLink
+          href="/accountability#log-interview"
+          className="w-full sm:flex-1 sm:min-w-[140px]"
+        >
+          Log interview
+        </ButtonLink>
+        <ButtonLink
+          href="/accountability#log-application"
+          variant="secondary"
+          className="w-full sm:flex-1 sm:min-w-[140px]"
+        >
+          Log application
+        </ButtonLink>
+        <ButtonLink
+          href="/profile?tab=resume"
+          variant="secondary"
+          className="w-full sm:flex-1 sm:min-w-[140px]"
+        >
+          Build a resume
+        </ButtonLink>
         {customGoalsLog && (
           <div className="sm:flex-1 sm:min-w-[140px]">
             <Button

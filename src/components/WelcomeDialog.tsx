@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   ClipboardCheck,
@@ -81,21 +82,32 @@ export function WelcomeDialog({
   role: string;
   persistDismissal: boolean;
 }) {
+  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   // When impersonating we never write welcomeSeenAt to the database, so
   // remember the dismissal per browser session or the modal would reopen on
   // every page load and block all clicks behind it.
   const storageKey = `career-path-welcome-dismissed-${userId}`;
-  const [open, setOpen] = useState(
-    () =>
-      typeof sessionStorage === "undefined" ||
-      sessionStorage.getItem(storageKey) !== "1",
-  );
-  const [confetti, setConfetti] = useState(true);
+  // Always start closed so server HTML matches the first client render.
+  // Opening after mount avoids a hydration mismatch that can freeze the page.
+  const [open, setOpen] = useState(false);
+  const [confetti, setConfetti] = useState(false);
 
   const features =
     role === "PARTICIPANT" ? PARTICIPANT_FEATURES : TEAM_FEATURES;
   const firstName = name.split(" ")[0] || name;
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(storageKey) !== "1") {
+        setOpen(true);
+        setConfetti(true);
+      }
+    } catch {
+      setOpen(true);
+      setConfetti(true);
+    }
+  }, [storageKey]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -104,15 +116,17 @@ export function WelcomeDialog({
     else if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  function dismiss() {
+  async function dismiss() {
     setOpen(false);
+    setConfetti(false);
     try {
       sessionStorage.setItem(storageKey, "1");
     } catch {
       // Storage unavailable (private mode); the dialog just reopens next load.
     }
     if (persistDismissal) {
-      void fetch("/api/welcome", { method: "POST" });
+      await fetch("/api/welcome", { method: "POST" });
+      router.refresh();
     }
   }
 
@@ -157,11 +171,12 @@ export function WelcomeDialog({
           </Button>
         </div>
 
-        {/* Inside the dialog so it paints above the top-layer backdrop. */}
-        <ConfettiCelebration
-          active={confetti}
-          onComplete={() => setConfetti(false)}
-        />
+        {open && (
+          <ConfettiCelebration
+            active={confetti}
+            onComplete={() => setConfetti(false)}
+          />
+        )}
       </dialog>
     </>
   );

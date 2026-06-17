@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { requireAuth } from "@/lib/session";
@@ -6,7 +5,7 @@ import { ActivityLogForm } from "@/components/ActivityLogForm";
 import { ParticipantLogFeed } from "@/components/log/ParticipantLogFeed";
 import { InterviewLogForm } from "@/components/interviews/InterviewLogForm";
 import { buildParticipantLogFeed } from "@/lib/log/participant-feed.server";
-import { Button } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
 import { BridgeProgressCard } from "@/components/goals/BridgeProgressCard";
 import { getParticipantGoalPace } from "@/lib/goals/pace.server";
 
@@ -26,14 +25,12 @@ export default async function AccountabilityPage() {
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/accountability#log-interview">
-          <Button size="sm">Log interview</Button>
-        </Link>
-        <Link href="/accountability#log-application">
-          <Button size="sm" variant="secondary">
-            Log application
-          </Button>
-        </Link>
+        <ButtonLink href="/accountability#log-interview" size="sm">
+          Log interview
+        </ButtonLink>
+        <ButtonLink href="/accountability#log-application" size="sm" variant="secondary">
+          Log application
+        </ButtonLink>
       </div>
 
       {bridgePace && (
