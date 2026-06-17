@@ -1,22 +1,9 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 
 import { ProgressBridgeProvider } from "@/components/goals/ProgressBridgeProvider";
-import { clearDialogTopLayer } from "@/lib/clear-dialog-top-layer";
 import { UnreadRepliesProvider } from "@/lib/questions/unread-replies.client";
-
-function ClearOrphanedDialogs() {
-  const pathname = usePathname();
-
-  useEffect(() => {
-    clearDialogTopLayer();
-  }, [pathname]);
-
-  return null;
-}
 
 export function Providers({
   children,
@@ -37,10 +24,5 @@ export function Providers({
     );
   }
 
-  return (
-    <SessionProvider session={session}>
-      <ClearOrphanedDialogs />
-      {content}
-    </SessionProvider>
-  );
+  return <SessionProvider session={session}>{content}</SessionProvider>;
 }

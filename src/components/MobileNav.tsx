@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
@@ -41,7 +40,7 @@ export function MobileNav({
             badgeCount > 0 ? `${href}#unread` : href;
 
           return (
-            <Link
+            <a
               key={href}
               href={linkHref}
               className={cn(
@@ -59,7 +58,7 @@ export function MobileNav({
                 <NavBadge count={badgeCount} />
               </span>
               {label}
-            </Link>
+            </a>
           );
         })}
       </div>

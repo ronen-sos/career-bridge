@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
@@ -65,7 +64,7 @@ export function DesktopNav({
             badgeCount > 0 ? `${href}#unread` : href;
 
           return (
-            <Link
+            <a
               key={href}
               href={linkHref}
               className={cn(
@@ -81,7 +80,7 @@ export function DesktopNav({
               />
               <span className="flex-1">{label}</span>
               <NavBadge count={badgeCount} />
-            </Link>
+            </a>
           );
         })}
       </nav>
