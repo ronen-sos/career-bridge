@@ -29,15 +29,15 @@ export function AskManagerDialog({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!dialog || !open) return;
 
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setError(null);
-      setSuccess(null);
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    dialog.showModal();
+    setError(null);
+    setSuccess(null);
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   function handleClose() {
@@ -84,6 +84,8 @@ export function AskManagerDialog({
     setLoading(false);
     router.refresh();
   }
+
+  if (!open) return null;
 
   return (
     <dialog

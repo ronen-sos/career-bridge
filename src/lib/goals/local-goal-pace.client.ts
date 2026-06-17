@@ -31,13 +31,13 @@ export function useLocalGoalPace(
   weekEnd: string,
   serverPace: GoalPace,
 ): GoalPace {
-  const [pace, setPace] = useState(serverPace);
+  const [useLocalToday, setUseLocalToday] = useState(false);
 
   useLayoutEffect(() => {
-    setPace(
-      adjustGoalPaceForLocalToday({ weekStart, weekEnd }, serverPace),
-    );
-  }, [weekStart, weekEnd, serverPace]);
+    setUseLocalToday(true);
+  }, []);
 
-  return pace;
+  if (!useLocalToday) return serverPace;
+
+  return adjustGoalPaceForLocalToday({ weekStart, weekEnd }, serverPace);
 }

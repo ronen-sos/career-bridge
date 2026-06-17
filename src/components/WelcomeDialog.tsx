@@ -75,21 +75,17 @@ export function WelcomeDialog({
   userId,
   name,
   role,
-  persistDismissal,
 }: {
   userId: string;
   name: string;
   role: string;
-  persistDismissal: boolean;
 }) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  // When impersonating we never write welcomeSeenAt to the database, so
-  // remember the dismissal per browser session or the modal would reopen on
-  // every page load and block all clicks behind it.
   const storageKey = `career-path-welcome-dismissed-${userId}`;
-  // Always start closed so server HTML matches the first client render.
-  // Opening after mount avoids a hydration mismatch that can freeze the page.
+  // Render nothing on the server and on the first client pass so sessionStorage
+  // checks cannot cause hydration mismatches or flash a blocking modal.
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [confetti, setConfetti] = useState(false);
 
@@ -98,6 +94,7 @@ export function WelcomeDialog({
   const firstName = name.split(" ")[0] || name;
 
   useEffect(() => {
+    setMounted(true);
     try {
       if (sessionStorage.getItem(storageKey) !== "1") {
         setOpen(true);
@@ -124,11 +121,11 @@ export function WelcomeDialog({
     } catch {
       // Storage unavailable (private mode); the dialog just reopens next load.
     }
-    if (persistDismissal) {
-      await fetch("/api/welcome", { method: "POST" });
-      router.refresh();
-    }
+    await fetch("/api/welcome", { method: "POST" });
+    router.refresh();
   }
+
+  if (!mounted || !open) return null;
 
   return (
     <>

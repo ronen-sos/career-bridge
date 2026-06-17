@@ -32,13 +32,13 @@ export function CustomGoalsLogDialog({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!dialog || !open) return;
 
-    if (open && !dialog.open) {
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    dialog.showModal();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   function handleClose() {
@@ -49,6 +49,8 @@ export function CustomGoalsLogDialog({
     config.customItems,
     config.dailyUpdates,
   ).filter((item) => item.completed).length;
+
+  if (!open) return null;
 
   return (
     <dialog

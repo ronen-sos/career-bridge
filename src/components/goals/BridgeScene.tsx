@@ -112,7 +112,7 @@ export function BridgeScene({
   const expectedPercent = Math.round(expectedFraction * 100);
 
   return (
-    <div className="relative">
+    <div className="pointer-events-none relative">
       <svg
         viewBox="0 30 400 122"
         className="w-full"

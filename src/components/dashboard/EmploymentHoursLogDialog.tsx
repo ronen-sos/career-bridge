@@ -42,14 +42,14 @@ export function EmploymentHoursLogDialog({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!dialog || !open) return;
 
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setError(null);
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    dialog.showModal();
+    setError(null);
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   function handleClose() {
@@ -106,6 +106,8 @@ export function EmploymentHoursLogDialog({
     setLoading(false);
     await finishActivityWithProgressCelebration(progressBridge, router);
   }
+
+  if (!open) return null;
 
   return (
     <dialog

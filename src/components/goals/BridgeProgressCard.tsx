@@ -122,8 +122,10 @@ export function BridgeProgressCard({
         <div className="p-4 pb-0">
           <CardTitle>Your path to success</CardTitle>
           <CardDescription>
-            {weekRange} · Day {pace.daysElapsed} of {pace.daysTotal} ·{" "}
-            {pace.overallPercent}% overall (all goal types)
+            <span suppressHydrationWarning>
+              {weekRange} · Day {pace.daysElapsed} of {pace.daysTotal} ·{" "}
+              {pace.overallPercent}% overall (all goal types)
+            </span>
           </CardDescription>
         </div>
 

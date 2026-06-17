@@ -60,12 +60,11 @@ export default async function AppLayout({
         <div className="mx-auto w-full max-w-lg md:max-w-4xl lg:max-w-6xl">
           {children}
         </div>
-        {showWelcome && (
+        {showWelcome && !session.user.impersonatedBy && (
           <WelcomeDialog
             userId={session.user.id}
             name={session.user.name ?? "there"}
             role={session.user.role}
-            persistDismissal={!session.user.impersonatedBy}
           />
         )}
         {session?.user && (

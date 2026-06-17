@@ -235,48 +235,58 @@ export function ProgressBridgeProvider({
       showBridgeMessage(message, INLINE_MESSAGE_MS);
       setDisplayProgress(from);
 
-      void scrollParticipantBridgeToTop().then(() => {
-        const start = performance.now();
+      return new Promise<void>((resolve) => {
+        void scrollParticipantBridgeToTop().then(() => {
+          const start = performance.now();
 
-        function tick(now: number) {
-          const elapsed = now - start;
-          const t = Math.min(1, elapsed / ANIMATION_MS);
-          const eased = easeOutCubic(t);
-          setDisplayProgress(from + (to - from) * eased);
+          function tick(now: number) {
+            const elapsed = now - start;
+            const t = Math.min(1, elapsed / ANIMATION_MS);
+            const eased = easeOutCubic(t);
+            setDisplayProgress(from + (to - from) * eased);
 
-          if (t < 1) {
-            animationFrameRef.current = requestAnimationFrame(tick);
-            return;
+            if (t < 1) {
+              animationFrameRef.current = requestAnimationFrame(tick);
+              return;
+            }
+
+            settledProgressRef.current = to;
+            setDisplayProgress(to);
+            setIsAnimating(false);
+            applyPaceSnapshot(snapshot);
+            animationFrameRef.current = null;
+            resolve();
           }
 
-          settledProgressRef.current = to;
-          setDisplayProgress(to);
-          setIsAnimating(false);
-          animationFrameRef.current = null;
-        }
+          animationFrameRef.current = requestAnimationFrame(tick);
+        });
+      });
+    },
+    [applyPaceSnapshot, cancelAnimation, showBridgeMessage],
+  );
 
-        animationFrameRef.current = requestAnimationFrame(tick);
+  const runWalkPulse = useCallback(
+    (snapshot: PaceSnapshot, message: string) => {
+      cancelAnimation();
+      setGoalId(snapshot.goalId);
+      setPace(snapshot.pace);
+      setIsAnimating(true);
+      showBridgeMessage(message, INLINE_MESSAGE_MS);
+      setDisplayProgress(snapshot.pace.overallProgress);
+      settledProgressRef.current = snapshot.pace.overallProgress;
+
+      return new Promise<void>((resolve) => {
+        void scrollParticipantBridgeToTop().then(() => {
+          if (walkPulseTimerRef.current) clearTimeout(walkPulseTimerRef.current);
+          walkPulseTimerRef.current = setTimeout(() => {
+            setIsAnimating(false);
+            resolve();
+          }, WALK_PULSE_MS);
+        });
       });
     },
     [cancelAnimation, showBridgeMessage],
   );
-
-  const runWalkPulse = useCallback((snapshot: PaceSnapshot, message: string) => {
-    cancelAnimation();
-    setGoalId(snapshot.goalId);
-    setPace(snapshot.pace);
-    setIsAnimating(true);
-    showBridgeMessage(message, INLINE_MESSAGE_MS);
-    setDisplayProgress(snapshot.pace.overallProgress);
-    settledProgressRef.current = snapshot.pace.overallProgress;
-
-    void scrollParticipantBridgeToTop().then(() => {
-      if (walkPulseTimerRef.current) clearTimeout(walkPulseTimerRef.current);
-      walkPulseTimerRef.current = setTimeout(() => {
-        setIsAnimating(false);
-      }, WALK_PULSE_MS);
-    });
-  }, [cancelAnimation, showBridgeMessage]);
 
   const snapshotProgress = useCallback(() => {
     snapshotRef.current =
@@ -319,12 +329,12 @@ export function ProgressBridgeProvider({
       : "You're moving forward!";
 
     if (progressIncreased) {
-      runProgressAnimation(previous, next, snapshot, movementMessage);
+      await runProgressAnimation(previous, next, snapshot, movementMessage);
       return true;
     }
 
     if (crossedDailyGoal) {
-      runWalkPulse(snapshot, movementMessage);
+      await runWalkPulse(snapshot, movementMessage);
       applyPaceSnapshot(snapshot);
       return celebrated || true;
     }
@@ -341,9 +351,20 @@ export function ProgressBridgeProvider({
   const syncFromServer = useCallback(
     (snapshot: PaceSnapshot) => {
       if (isAnimating) return;
-      applyPaceSnapshot(snapshot);
-      settledProgressRef.current = snapshot.pace.overallProgress;
-      setDisplayProgress(snapshot.pace.overallProgress);
+
+      const normalized = normalizeGoalPaceSnapshot(snapshot);
+      const incoming = normalized.pace.overallProgress;
+      const settled = settledProgressRef.current;
+
+      // After logging activity, a soft refresh can briefly return stale pace
+      // data — never animate the walker backwards.
+      if (settled != null && incoming + PROGRESS_EPSILON < settled) {
+        return;
+      }
+
+      applyPaceSnapshot(normalized);
+      settledProgressRef.current = incoming;
+      setDisplayProgress(incoming);
     },
     [applyPaceSnapshot, isAnimating],
   );
@@ -414,9 +435,10 @@ export function useBridgeDisplayProgress(
 ): number {
   const bridge = useProgressBridge();
 
+  // Keep showing client progress after the walk animation finishes — the page
+  // props are stale until router.refresh() completes.
   if (
     bridge?.goalId === goalId &&
-    bridge.isAnimating &&
     bridge.displayProgress !== null
   ) {
     return bridge.displayProgress;

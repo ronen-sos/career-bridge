@@ -31,7 +31,7 @@ export function ParticipantDashboardActions({
 
   return (
     <>
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="relative z-10 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <ButtonLink
           href="/accountability#log-interview"
           className="w-full sm:flex-1 sm:min-w-[140px]"
@@ -90,25 +90,25 @@ export function ParticipantDashboardActions({
         )}
       </div>
 
-      {customGoalsLog && (
+      {customGoalsLog && customGoalsDialogOpen && (
         <CustomGoalsLogDialog
-          open={customGoalsDialogOpen}
+          open
           onOpenChange={setCustomGoalsDialogOpen}
           config={customGoalsLog}
         />
       )}
 
-      {hoursLog && (
+      {hoursLog && hoursDialogOpen && (
         <EmploymentHoursLogDialog
-          open={hoursDialogOpen}
+          open
           onOpenChange={setHoursDialogOpen}
           config={hoursLog}
         />
       )}
 
-      {askManager && (
+      {askManager && askManagerDialogOpen && (
         <AskManagerDialog
-          open={askManagerDialogOpen}
+          open
           onOpenChange={setAskManagerDialogOpen}
           config={askManager}
         />
