@@ -259,10 +259,10 @@ export function BridgeScene({
       </svg>
 
       <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-stone-700 shadow-sm backdrop-blur">
-        {overallPercent}% traveled
+        <span suppressHydrationWarning>{overallPercent}% traveled</span>
       </div>
       <div className="absolute bottom-3 right-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-indigo-700 shadow-sm backdrop-blur">
-        {expectedPercent}% expected
+        <span suppressHydrationWarning>{expectedPercent}% expected</span>
       </div>
     </div>
   );

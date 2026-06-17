@@ -1,17 +1,20 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { ProgressBridgeProvider } from "@/components/goals/ProgressBridgeProvider";
+import { clearDialogTopLayer } from "@/lib/clear-dialog-top-layer";
 import { UnreadRepliesProvider } from "@/lib/questions/unread-replies.client";
 
-function CloseOrphanedDialogs() {
+function ClearOrphanedDialogs() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    document.querySelectorAll("dialog[open]").forEach((node) => {
-      if (node instanceof HTMLDialogElement) node.close();
-    });
-  }, []);
+    clearDialogTopLayer();
+  }, [pathname]);
+
   return null;
 }
 
@@ -34,5 +37,10 @@ export function Providers({
     );
   }
 
-  return <SessionProvider session={session}><CloseOrphanedDialogs />{content}</SessionProvider>;
+  return (
+    <SessionProvider session={session}>
+      <ClearOrphanedDialogs />
+      {content}
+    </SessionProvider>
+  );
 }

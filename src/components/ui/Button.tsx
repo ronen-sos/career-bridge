@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { cn } from "@/lib/cn";
 
 type ButtonStyleProps = {
@@ -44,17 +42,22 @@ export function Button({
   );
 }
 
-type ButtonLinkProps = React.ComponentProps<typeof Link> & ButtonStyleProps;
+type ButtonLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> &
+  ButtonStyleProps & {
+    href: string;
+  };
 
-/** Use instead of wrapping `<Button>` in `<Link>` — nested buttons break navigation. */
+/** Styled anchor for navigation — avoids nested buttons and client-router click issues. */
 export function ButtonLink({
   className,
   variant = "primary",
   size = "md",
+  href,
   ...props
 }: ButtonLinkProps) {
   return (
-    <Link
+    <a
+      href={href}
       className={buttonClassName({ variant, size, className })}
       {...props}
     />

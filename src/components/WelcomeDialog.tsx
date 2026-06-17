@@ -9,6 +9,7 @@ import {
   Footprints,
   PartyPopper,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -104,15 +105,6 @@ export function WelcomeDialog({
     }
   }, [storageKey]);
 
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open]);
-
   async function dismiss() {
     if (dismissing) return;
     setDismissing(true);
@@ -121,7 +113,7 @@ export function WelcomeDialog({
     try {
       sessionStorage.setItem(storageKey, "1");
     } catch {
-      // Storage unavailable (private mode); the dialog reopens next load.
+      // Storage unavailable (private mode); the banner reopens next load.
     }
     try {
       await fetch("/api/welcome", { method: "POST" });
@@ -135,58 +127,65 @@ export function WelcomeDialog({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
+      <section
+        className="relative mx-4 mt-4 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-lg md:mx-8 md:mt-6"
         aria-labelledby="welcome-title"
       >
-        <button
-          type="button"
-          className="absolute inset-0 bg-stone-950/50"
-          aria-label="Dismiss welcome"
-          onClick={dismiss}
-        />
-        <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-          <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 px-6 py-6 text-white">
-            <div className="flex items-center gap-2">
-              <PartyPopper className="h-6 w-6 text-amber-300" aria-hidden />
-              <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
-                Welcome to Career Path
+        <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 px-5 py-5 text-white sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <PartyPopper className="h-5 w-5 text-amber-300" aria-hidden />
+                <p className="text-sm font-medium uppercase tracking-wide text-emerald-200">
+                  Welcome to Career Path
+                </p>
+              </div>
+              <h2
+                id="welcome-title"
+                className="mt-2 text-xl font-bold leading-tight sm:text-2xl"
+              >
+                Great to have you here, {firstName}!
+              </h2>
+              <p className="mt-1 text-sm text-emerald-100">
+                Here&apos;s what you can do — you can keep using the app while
+                you read, then dismiss this when you&apos;re ready.
               </p>
             </div>
-            <h2 id="welcome-title" className="mt-2 text-2xl font-bold leading-tight">
-              Great to have you here, {firstName}!
-            </h2>
-            <p className="mt-1 text-sm text-emerald-100">
-              Here&apos;s what you can do in the app:
-            </p>
-          </div>
-
-          <div className="space-y-4 px-6 py-5">
-            {features.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-                  <Icon className="h-4.5 w-4.5" aria-hidden />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-stone-900">{title}</p>
-                  <p className="text-sm text-stone-600">{description}</p>
-                </div>
-              </div>
-            ))}
-
-            <Button
+            <button
               type="button"
               onClick={dismiss}
               disabled={dismissing}
-              className="w-full"
+              className="shrink-0 rounded-lg p-1.5 text-emerald-100 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Dismiss welcome"
             >
-              Let&apos;s get started
-            </Button>
+              <X className="h-5 w-5" aria-hidden />
+            </button>
           </div>
         </div>
-      </div>
+
+        <div className="space-y-3 px-5 py-4 sm:px-6 sm:py-5">
+          {features.map(({ icon: Icon, title, description }) => (
+            <div key={title} className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                <Icon className="h-4.5 w-4.5" aria-hidden />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-stone-900">{title}</p>
+                <p className="text-sm text-stone-600">{description}</p>
+              </div>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            onClick={dismiss}
+            disabled={dismissing}
+            className="w-full"
+          >
+            Let&apos;s get started
+          </Button>
+        </div>
+      </section>
 
       {confetti && (
         <ConfettiCelebration
